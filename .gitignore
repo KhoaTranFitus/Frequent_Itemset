@@ -3,5 +3,5 @@ __pycache__/
 output.txt
 out.txt
 ref.txt
-lessons/
+/lessons
 ~$*
