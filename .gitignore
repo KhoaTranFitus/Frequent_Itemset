@@ -1,7 +1,13 @@
 __pycache__/
 *.pyc
+.pytest_cache/
+.pytest_tmp/
 output.txt
-out.txt
+out*.txt
 ref.txt
-/lessons
+lessons/
+tool/
 ~$*
+
+# kết quả của người chạy và ref lớn
+data/output/
