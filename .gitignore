@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+output.txt
+out.txt
+ref.txt
+lessons/
+~$*
