@@ -13,12 +13,19 @@ lần chạy: chess 0.6 và mushroom 0.05 theo số liệu đã có trong README
 mức nào phải bỏ.
 """
 import math
+import os
 import sys
 
 # Seed cố định cho mọi chỗ có ngẫu nhiên (cắt tập con, sinh dữ liệu tổng hợp...)
 SEED = 42
 
 SPMF_JAR = "tool/spmf.jar"
+
+# Lệnh java để chạy SPMF. Máy có nhiều bản Java thì PATH thường trỏ vào bản cũ
+# (ví dụ shim java8path của Oracle), trong khi spmf.jar cần Java 25, nên cho phép
+# chỉ rõ bản muốn dùng:
+#   JAVA="C:/Program Files/Java/jdk-25.0.5.0.3/bin/java.exe" python -m scripts.make_refs
+JAVA_BIN = os.environ.get("JAVA", "java")
 
 REF_DIR = "data/output/ref"      # kết quả tham chiếu do SPMF sinh
 MINE_DIR = "data/output/mine"    # kết quả của nhóm

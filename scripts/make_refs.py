@@ -16,7 +16,8 @@ import os
 import subprocess
 import sys
 
-from src.config import REF_DIR, SPMF_JAR, cases, ref_path, use_utf8_stdout
+from src.config import (JAVA_BIN, REF_DIR, SPMF_JAR, cases, ref_path,
+                        use_utf8_stdout)
 
 
 def run_one(name, path, minsup, skip_existing=True):
@@ -31,7 +32,7 @@ def run_one(name, path, minsup, skip_existing=True):
         return True
 
     percent = f"{minsup * 100:g}%"      # 0.375 -> "37.5%", 0.008 -> "0.8%"
-    cmd = ["java", "-jar", SPMF_JAR, "run", "FPGrowth_itemsets", path, out, percent]
+    cmd = [JAVA_BIN, "-jar", SPMF_JAR, "run", "FPGrowth_itemsets", path, out, percent]
     print(f"[chạy] {name} minsup={minsup} ({percent}) -> {out}", flush=True)
 
     result = subprocess.run(cmd, capture_output=True, text=True)

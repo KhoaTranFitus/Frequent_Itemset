@@ -130,6 +130,12 @@ python -m pytest tests/test_correctness.py -v
 
 Cần **Java** (kiểm tra bằng `java -version`) và file `spmf.jar` đặt vào thư mục `tool/` (tải ở trang SPMF, mục Download; file không nằm trong repo vì nặng).
 
+Máy có nhiều bản Java và `java` trong PATH lại là bản cũ thì chỉ rõ bản muốn dùng bằng biến `JAVA`:
+
+```bash
+JAVA="C:/Program Files/Java/jdk-25.0.5.0.3/bin/java.exe" python -m scripts.make_refs --group toy
+```
+
 ### Cách 1: sinh toàn bộ ref rồi chạy test (khuyên dùng)
 
 ```bash
