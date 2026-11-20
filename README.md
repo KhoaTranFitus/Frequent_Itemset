@@ -19,6 +19,7 @@ Cài đặt lại thuật toán **FP-Growth** (Han, Pei, Yin, Mao, 2004) bằng 
 - Thuật toán chỉ dùng **thư viện chuẩn** của Python (`argparse`, `itertools`, `math`...). Không dùng thư viện FIM có sẵn.
 - `pytest` chỉ cần để chạy kiểm thử.
 - Java và `spmf.jar` chỉ cần khi muốn **tự sinh lại** file tham chiếu. Chạy test với ref có sẵn thì không cần.
+- Bản `spmf.jar` hiện tại trên trang SPMF **biên dịch cho Java 25**, bản trước đó (`spmf2.64.jar`) cần Java 21. Java 8 chạy không được, báo `UnsupportedClassVersionError`.
 
 ## Cài đặt
 
@@ -120,9 +121,39 @@ python -m pytest tests/test_correctness.py -v
 - Các test **so với SPMF** cần file tham chiếu trong `data/output/ref/`. Thư mục `data/output/` **không nằm trong repo**, nên lần đầu chạy các test này sẽ bị `SKIPPED`. Muốn chạy đầy đủ, làm theo mục "So sánh với SPMF" bên dưới để sinh ref.
 - `test_benchmark.py` chạy **cả bản cơ bản và bản tối ưu** trên Mushroom, Chess, kiểm tra hai bản cho kết quả giống nhau, rồi ghi thời gian vào `data/output/benchmark_log.csv`. Mất khoảng 4 phút và cần ref.
 
+## Thực nghiệm chương 2
+
+Danh sách CSDL, minsup và đường dẫn kết quả lấy từ [`src/config.py`](src/config.py), sửa một chỗ là mọi script đi theo.
+
+```bash
+# thời gian + số itemset + correctness theo minsup (4 CSDL x 7 mức minsup)
+python -m scripts.exp_runtime
+
+# chạy riêng một CSDL, hoặc chạy thử nhanh
+python -m scripts.exp_runtime --dataset retail
+python -m scripts.exp_runtime --group toy --runs 1
+
+# thời gian theo kích thước CSDL (Retail, cắt 10/25/50/75/100%)
+python -m scripts.exp_scalability
+```
+
+| Script | CSV | Các cột |
+|---|---|---|
+| `exp_runtime.py` | `data/output/exp/runtime.csv` | `dataset, minsup, min_count, itemsets, t_basic_s, t_opt_s, t_spmf_s, match_pct` |
+| `exp_scalability.py` | `data/output/exp/scalability.csv` | `dataset, fraction, transactions, minsup, itemsets, t_opt_s` |
+
+Vài điểm cần nắm khi đọc số liệu:
+
+- `exp_runtime.py` **cộng dồn** vào CSV và bỏ qua ca đã có, nên dừng giữa đường rồi chạy lại không mất phần đã làm. Muốn đo lại thì thêm `--force`.
+- Nó cũng **tự sinh file ref** khi chạy SPMF, nên không cần chạy `make_refs.py` riêng. Thiếu `tool/spmf.jar`, hoặc Java trên máy cũ hơn bản jar, thì hai cột `t_spmf_s`, `match_pct` để trống và phần còn lại vẫn đo được; script nói rõ lý do ở dòng cuối và tắt SPMF ngay từ ca đầu thay vì thử lại 28 lần. Khắc phục rồi thì chạy lại với `--force`.
+- **Thời gian SPMF** lấy từ dòng `Total time` do chính SPMF in ra, không tính thời gian khởi động JVM. Thời gian của nhóm cũng chỉ tính phần thuật toán, không tính đọc file.
+- `exp_scalability.py` trộn giao dịch một lần bằng `random.Random(42)` rồi lấy tiền tố, nên các tập con **lồng nhau** và cố định qua mọi lần chạy. minsup giữ ở dạng tương đối nên `min_count` giảm theo kích thước tập con.
+
 ## So sánh với SPMF
 
-Cần **Java** (kiểm tra bằng `java -version`) và file `spmf.jar` đặt vào thư mục `tool/` (tải ở trang SPMF, mục Download; file không nằm trong repo vì nặng).
+Cần **Java 25 trở lên** (kiểm tra bằng `java -version`) và file `spmf.jar` đặt vào thư mục `tool/` (tải ở trang SPMF, mục Download; file không nằm trong repo vì nặng, khoảng 15 MB).
+
+Trang SPMF chỉ còn host bản mới nhất và bản ngay trước đó, nên không tải được bản cũ chạy trên Java 8. Nếu chỉ có Java 21 thì dùng `spmf2.64.jar` và đổi tên thành `tool/spmf.jar`.
 
 Máy có nhiều bản Java và `java` trong PATH lại là bản cũ thì chỉ rõ bản muốn dùng bằng biến `JAVA`:
 
@@ -196,6 +227,8 @@ Group_23/
 │   ├── __init__.py
 │   ├── make_refs.py          # chạy SPMF để sinh file tham chiếu
 │   ├── compare_spmf.py       # so sánh 2 file kết quả
+│   ├── exp_runtime.py        # thời gian, số itemset, correctness theo minsup
+│   ├── exp_scalability.py    # thời gian theo kích thước CSDL
 │   └── run_toy_compare.py    # so bản basic và optimized trên các CSDL toy
 ├── data/
 │   ├── toy/                  # CSDL nhỏ để kiểm thử nhanh (toy_test1..4)
@@ -203,6 +236,7 @@ Group_23/
 │   └── output/               # KHÔNG nằm trong repo, được sinh khi chạy
 │       ├── ref/              # kết quả tham chiếu do SPMF sinh ra (scripts/make_refs.py)
 │       ├── mine/             # kết quả của nhóm
+│       ├── exp/              # CSV số liệu thực nghiệm chương 2
 │       └── benchmark_log.csv # thời gian đo được (test_benchmark.py)
 ├── notebooks/
 │   └── demo.ipynb            # demo chạy trên Google Colab
@@ -266,6 +300,7 @@ Số liệu chi tiết nằm trong `data/output/benchmark_log.csv`.
 | `FileNotFoundError` khi đọc dữ liệu | Sai đường dẫn tương đối | Chạy từ thư mục gốc |
 | Test bị `SKIPPED` | Chưa có file ref (thư mục `data/output/` không nằm trong repo) | Chạy `python -m scripts.make_refs --group toy` (và `--group benchmark`) |
 | `'java' is not recognized` | Chưa cài Java | Cài JDK/JRE rồi mở terminal mới |
+| `UnsupportedClassVersionError ... class file version 69.0` | Java trên máy cũ hơn bản `spmf.jar` đang dùng (69 là Java 25, 65 là Java 21, 52 là Java 8) | Cài Java 25 trở lên, hoặc dùng bản `spmf.jar` cũ hơn khớp với Java đang có |
 | `Unable to access jarfile spmf.jar` | Chưa có `spmf.jar` | Tải về và đặt vào `tool/` |
 | `error: --minsup phải nằm trong khoảng (0, 1]` | Giá trị minsup không hợp lệ | Dùng minsup tương đối, ví dụ `0.4` |
 
