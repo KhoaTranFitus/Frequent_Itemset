@@ -14,3 +14,6 @@ data/output/
 # file hướng dẫn cho Claude Code, không đưa vào repo
 CLAUDE.md
 .claude/
+
+# T10I4D100K không đưa vào repo, tự tải từ trang SPMF Datasets
+data/benchmark/T10I4D100K.txt

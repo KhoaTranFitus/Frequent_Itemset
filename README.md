@@ -10,7 +10,7 @@ Cài đặt lại thuật toán **FP-Growth** (Han, Pei, Yin, Mao, 2004) bằng 
 - Demo notebook (Google Colab): _dán link public tại đây_
 - Báo cáo: [`docs/Report.pdf`](docs/Report.pdf)
 - Bài báo gốc: [`docs/references/fpgrowth_04.pdf`](docs/references/fpgrowth_04.pdf)
-- Dữ liệu benchmark: nằm sẵn trong `data/benchmark/` (xem mục [Dữ liệu benchmark](#dữ-liệu-benchmark)), không cần host ngoài repo
+- Dữ liệu benchmark: xem mục [Dữ liệu benchmark](#dữ-liệu-benchmark) — ba CSDL nằm trong repo, T10I4D100K tự tải một lệnh
 - SPMF: https://www.philippe-fournier-viger.com/spmf/
 
 ## Yêu cầu môi trường
@@ -81,7 +81,15 @@ min_count = ceil(minsup * số_giao_dịch)
 
 ## Dữ liệu benchmark
 
-Bốn CSDL benchmark nằm trong `data/benchmark/`, tải từ [SPMF Datasets](https://www.philippe-fournier-viger.com/spmf/datasets.php), thư mục `publicdatasets/`. Tổng khoảng 8,5 MB nên để thẳng trong repo, không cần host ngoài.
+Bốn CSDL benchmark đều tải từ [SPMF Datasets](https://www.philippe-fournier-viger.com/spmf/datasets.php), thư mục `publicdatasets/`.
+
+Chess, Mushroom và Retail nằm sẵn trong `data/benchmark/`. **T10I4D100K không nằm trong repo**, phải tự tải một lần trước khi chạy thực nghiệm:
+
+```bash
+curl -o data/benchmark/T10I4D100K.txt https://www.philippe-fournier-viger.com/spmf/publicdatasets/T10I4D100K.txt
+```
+
+File khoảng 3,8 MB. Thiếu nó thì các script thực nghiệm bỏ qua CSDL này và in `[bỏ qua] thiếu dữ liệu`, phần còn lại vẫn chạy.
 
 | CSDL | Giao dịch | Số item | Độ dài TB | Mật độ | Đặc điểm |
 |---|---|---|---|---|---|
@@ -190,7 +198,7 @@ Group_23/
 │   └── run_toy_compare.py    # so bản basic và optimized trên các CSDL toy
 ├── data/
 │   ├── toy/                  # CSDL nhỏ để kiểm thử nhanh (toy_test1..4)
-│   ├── benchmark/            # chess.txt, mushroom.txt, retail.txt, T10I4D100K.txt
+│   ├── benchmark/            # chess.txt, mushroom.txt, retail.txt (T10I4D100K.txt tự tải)
 │   └── output/               # KHÔNG nằm trong repo, được sinh khi chạy
 │       ├── ref/              # kết quả tham chiếu do SPMF sinh ra (scripts/make_refs.py)
 │       ├── mine/             # kết quả của nhóm
