@@ -10,7 +10,7 @@ Cài đặt lại thuật toán **FP-Growth** (Han, Pei, Yin, Mao, 2004) bằng 
 - Demo notebook (Google Colab): _dán link public tại đây_
 - Báo cáo: [`docs/Report.pdf`](docs/Report.pdf)
 - Bài báo gốc: [`docs/references/fpgrowth_04.pdf`](docs/references/fpgrowth_04.pdf)
-- Dữ liệu benchmark: xem mục [Dữ liệu benchmark](#dữ-liệu-benchmark) — ba CSDL nằm trong repo, T10I4D100K tự tải một lệnh
+- Dữ liệu benchmark: cả bốn CSDL nằm trong `data/benchmark/`, xem mục [Dữ liệu benchmark](#dữ-liệu-benchmark)
 - SPMF: https://www.philippe-fournier-viger.com/spmf/
 
 ## Yêu cầu môi trường
@@ -81,24 +81,18 @@ min_count = ceil(minsup * số_giao_dịch)
 
 ## Dữ liệu benchmark
 
-Bốn CSDL benchmark đều tải từ [SPMF Datasets](https://www.philippe-fournier-viger.com/spmf/datasets.php), thư mục `publicdatasets/`.
+Cả bốn CSDL benchmark **nằm sẵn trong `data/benchmark/`**, clone về là chạy được ngay, không phải tải gì thêm. Tổng khoảng 9 MB.
 
-Chess, Mushroom và Retail nằm sẵn trong `data/benchmark/`. **T10I4D100K không nằm trong repo**, phải tự tải một lần trước khi chạy thực nghiệm:
+| CSDL | Giao dịch | Số item | Độ dài TB | Mật độ | Đặc điểm | Nguồn |
+|---|---|---|---|---|---|---|
+| Chess | 3.196 | 75 | 37,00 | 49,33% | dày đặc, itemset dài | UCI, qua FIMI |
+| Mushroom | 8.416 | 119 | 23,00 | 19,33% | dày đặc, nhiều item | UCI, qua FIMI |
+| Retail | 88.162 | 16.470 | 10,31 | 0,06% | thưa, dữ liệu thật | cửa hàng bán lẻ ở Bỉ, qua FIMI |
+| T10I4D100K | 100.000 | 870 | 10,10 | 1,16% | tổng hợp, thưa | IBM Quest generator |
 
-```bash
-curl -o data/benchmark/T10I4D100K.txt https://www.philippe-fournier-viger.com/spmf/publicdatasets/T10I4D100K.txt
-```
+Các số trên do `src/utils.py` đọc trực tiếp từ file trong repo và khớp với bảng của [SPMF Datasets](https://www.philippe-fournier-viger.com/spmf/datasets.php), thư mục `publicdatasets/`, nơi tải cả bốn file.
 
-File khoảng 3,8 MB. Thiếu nó thì các script thực nghiệm bỏ qua CSDL này và in `[bỏ qua] thiếu dữ liệu`, phần còn lại vẫn chạy.
-
-| CSDL | Giao dịch | Số item | Độ dài TB | Mật độ | Đặc điểm |
-|---|---|---|---|---|---|
-| Chess | 3.196 | 75 | 37,00 | 49,33% | dày đặc, itemset dài |
-| Mushroom | 8.416 | 119 | 23,00 | 19,33% | dày đặc, nhiều item |
-| Retail | 88.162 | 16.470 | 10,31 | 0,06% | thưa, dữ liệu thật |
-| T10I4D100K | 100.000 | 870 | 10,10 | 1,16% | tổng hợp, thưa |
-
-Các số trên do `src/utils.py` đọc trực tiếp từ file trong repo và khớp với bảng của SPMF.
+**T10I4D100K là dữ liệu tổng hợp**, do IBM Quest Synthetic Data Generator sinh theo thủ tục trong Agrawal và Srikant (1994), không phải dữ liệu thật và không do nhóm sinh ra. Tên file là tham số sinh: `T10` độ dài giao dịch trung bình 10, `I4` độ dài trung bình của mẫu ẩn tiềm năng 4, `D100K` một trăm nghìn giao dịch. Đây đúng là CSDL mà bài báo FP-Growth dùng trong phần thực nghiệm (mục 5 của [`docs/references/fpgrowth_04.pdf`](docs/references/fpgrowth_04.pdf)), nên số liệu của nhóm so sánh được với bài báo gốc.
 
 Danh sách minsup dùng cho thực nghiệm được chốt trong [`src/config.py`](src/config.py), mỗi CSDL 7 mức:
 
@@ -205,7 +199,7 @@ Group_23/
 │   └── run_toy_compare.py    # so bản basic và optimized trên các CSDL toy
 ├── data/
 │   ├── toy/                  # CSDL nhỏ để kiểm thử nhanh (toy_test1..4)
-│   ├── benchmark/            # chess.txt, mushroom.txt, retail.txt (T10I4D100K.txt tự tải)
+│   ├── benchmark/            # chess.txt, mushroom.txt, retail.txt, T10I4D100K.txt
 │   └── output/               # KHÔNG nằm trong repo, được sinh khi chạy
 │       ├── ref/              # kết quả tham chiếu do SPMF sinh ra (scripts/make_refs.py)
 │       ├── mine/             # kết quả của nhóm
