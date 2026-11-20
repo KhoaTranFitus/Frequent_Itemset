@@ -188,6 +188,7 @@ Group_23/
 │       └── fpgrowth_basic.py # bản cơ bản, không tối ưu (mốc so sánh)
 ├── tests/
 │   ├── __init__.py
+│   ├── conftest.py           # bật UTF-8 cho output của pytest -s
 │   ├── test_correctness.py   # đúng đắn trên CSDL nhỏ, so với SPMF
 │   ├── test_encode.py        # mã hóa item dạng chữ sang số và giải mã ngược
 │   └── test_benchmark.py     # Mushroom, Chess: đúng đắn + thời gian basic vs optimized
