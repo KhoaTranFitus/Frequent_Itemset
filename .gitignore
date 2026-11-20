@@ -11,3 +11,6 @@ tool/
 
 # kết quả của người chạy và ref lớn
 data/output/
+# file hướng dẫn cho Claude Code, không đưa vào repo
+CLAUDE.md
+.claude/
