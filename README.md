@@ -10,7 +10,7 @@ Cài đặt lại thuật toán **FP-Growth** (Han, Pei, Yin, Mao, 2004) bằng 
 - Demo notebook (Google Colab): _dán link public tại đây_
 - Báo cáo: [`docs/Report.pdf`](docs/Report.pdf)
 - Bài báo gốc: [`docs/references/fpgrowth_04.pdf`](docs/references/fpgrowth_04.pdf)
-- Dữ liệu lớn (nếu có host ngoài repo): _dán link Hugging Face / Kaggle tại đây_
+- Dữ liệu benchmark: nằm sẵn trong `data/benchmark/` (xem mục [Dữ liệu benchmark](#dữ-liệu-benchmark)), không cần host ngoài repo
 - SPMF: https://www.philippe-fournier-viger.com/spmf/
 
 ## Yêu cầu môi trường
@@ -78,6 +78,28 @@ min_count = ceil(minsup * số_giao_dịch)
 ```
 
 (có làm tròn `round(..., 9)` để tránh sai số số thực, giống cách SPMF làm tròn lên.)
+
+## Dữ liệu benchmark
+
+Bốn CSDL benchmark nằm trong `data/benchmark/`, tải từ [SPMF Datasets](https://www.philippe-fournier-viger.com/spmf/datasets.php), thư mục `publicdatasets/`. Tổng khoảng 8,5 MB nên để thẳng trong repo, không cần host ngoài.
+
+| CSDL | Giao dịch | Số item | Độ dài TB | Mật độ | Đặc điểm |
+|---|---|---|---|---|---|
+| Chess | 3.196 | 75 | 37,00 | 49,33% | dày đặc, itemset dài |
+| Mushroom | 8.416 | 119 | 23,00 | 19,33% | dày đặc, nhiều item |
+| Retail | 88.162 | 16.470 | 10,31 | 0,06% | thưa, dữ liệu thật |
+| T10I4D100K | 100.000 | 870 | 10,10 | 1,16% | tổng hợp, thưa |
+
+Các số trên do `src/utils.py` đọc trực tiếp từ file trong repo và khớp với bảng của SPMF.
+
+Danh sách minsup dùng cho thực nghiệm được chốt trong [`src/config.py`](src/config.py), mỗi CSDL 7 mức:
+
+| CSDL | minsup |
+|---|---|
+| Chess | 0,9 · 0,85 · 0,8 · 0,75 · 0,7 · 0,65 · 0,6 |
+| Mushroom | 0,5 · 0,4 · 0,3 · 0,2 · 0,15 · 0,1 · 0,05 |
+| Retail | 0,01 · 0,008 · 0,005 · 0,004 · 0,003 · 0,002 · 0,001 |
+| T10I4D100K | 0,01 · 0,008 · 0,005 · 0,004 · 0,003 · 0,002 · 0,001 |
 
 ## Kiểm thử
 
@@ -149,7 +171,8 @@ Group_23/
 ├── requirements.txt
 ├── src/
 │   ├── __init__.py
-│   ├── utils.py              # đọc/ghi file SPMF, đếm support, sắp xếp giao dịch, so sánh kết quả
+│   ├── utils.py              # đọc/ghi file SPMF, đếm support, sắp xếp giao dịch, so sánh kết quả, encode/decode item
+│   ├── config.py             # CSDL benchmark, danh sách minsup, đường dẫn kết quả, to_min_count
 │   ├── structures.py         # FPNode, dựng FP-tree, prefix path, conditional FP-tree
 │   └── algorithm/
 │       ├── __init__.py
@@ -158,6 +181,7 @@ Group_23/
 ├── tests/
 │   ├── __init__.py
 │   ├── test_correctness.py   # đúng đắn trên CSDL nhỏ, so với SPMF
+│   ├── test_encode.py        # mã hóa item dạng chữ sang số và giải mã ngược
 │   └── test_benchmark.py     # Mushroom, Chess: đúng đắn + thời gian basic vs optimized
 ├── scripts/
 │   ├── __init__.py
@@ -166,7 +190,7 @@ Group_23/
 │   └── run_toy_compare.py    # so bản basic và optimized trên các CSDL toy
 ├── data/
 │   ├── toy/                  # CSDL nhỏ để kiểm thử nhanh (toy_test1..4)
-│   ├── benchmark/            # chess.txt, mushroom.txt
+│   ├── benchmark/            # chess.txt, mushroom.txt, retail.txt, T10I4D100K.txt
 │   └── output/               # KHÔNG nằm trong repo, được sinh khi chạy
 │       ├── ref/              # kết quả tham chiếu do SPMF sinh ra (scripts/make_refs.py)
 │       ├── mine/             # kết quả của nhóm
@@ -222,7 +246,7 @@ Số liệu chi tiết nằm trong `data/output/benchmark_log.csv`.
 ## Tái lập kết quả
 
 - Thuật toán xác định (deterministic): không dùng số ngẫu nhiên, thứ tự item luôn cố định nhờ tiêu chí phụ khi support bằng nhau.
-- Dữ liệu Chess và Mushroom tải từ SPMF Datasets hoặc FIMI Repository. Lưu ý bản Mushroom dùng có **8.416 giao dịch** (khác con số 8.124 của một số nguồn).
+- Toàn bộ dữ liệu benchmark tải từ trang SPMF Datasets, xem mục [Dữ liệu benchmark](#dữ-liệu-benchmark). Lưu ý bản Mushroom dùng có **8.416 giao dịch**, đúng bằng con số SPMF công bố; con số 8.124 hay gặp là của bản UCI gốc.
 - Muốn chạy lại toàn bộ benchmark: `python -m pytest tests/test_benchmark.py -v -s`.
 
 ## Xử lý sự cố thường gặp
