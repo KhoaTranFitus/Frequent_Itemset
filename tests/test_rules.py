@@ -321,6 +321,21 @@ def test_moc_groceries_so_luat():
 
 
 @need_groceries
+def test_moc_groceries_minsup_thap():
+    """minsup 0,001 + minconf 0,8 phải ra đúng 410 luật — giá trị đã công bố.
+
+    Mốc thứ hai này quan trọng vì nó ở đầu đối diện của dải tham số: 13.492 tập
+    phổ biến thay vì 333, và luật dài tới 5 item. Khớp được cả hai đầu thì khó
+    mà đúng do may.
+    """
+    encoded, _ = encode(read_baskets(GROCERIES))
+    itemsets = fpgrowth(encoded, to_min_count(0.001, len(encoded)))
+
+    assert len(itemsets) == 13492
+    assert len(generate_rules(itemsets, len(encoded), 0.8)) == 410
+
+
+@need_groceries
 def test_moc_groceries_gia_tri_luat():
     """Hai luật kinh điển phải khớp giá trị đã công bố tới 4 chữ số thập phân."""
     encoded, code = encode(read_baskets(GROCERIES))
