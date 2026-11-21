@@ -11,13 +11,14 @@ Cài đặt lại thuật toán **FP-Growth** (Han, Pei, Yin, Mao, 2004) bằng 
 - Báo cáo: [`docs/Report.pdf`](docs/Report.pdf)
 - Bài báo gốc: [`docs/references/fpgrowth_04.pdf`](docs/references/fpgrowth_04.pdf)
 - Dữ liệu benchmark: cả bốn CSDL nằm trong `data/benchmark/`, xem mục [Dữ liệu benchmark](#dữ-liệu-benchmark)
+- Dữ liệu Ứng dụng 1 (Groceries): `data/app1/groceries.csv`, nguồn và mốc kiểm chứng ghi trong [`data/app1/README.md`](data/app1/README.md)
 - SPMF: https://www.philippe-fournier-viger.com/spmf/
 
 ## Yêu cầu môi trường
 
 - Python **3.9 trở lên** (đã chạy trên Python 3.13).
-- Thuật toán chỉ dùng **thư viện chuẩn** của Python (`argparse`, `itertools`, `math`...). Không dùng thư viện FIM có sẵn.
-- `pytest` chỉ cần để chạy kiểm thử.
+- Thuật toán chỉ dùng **thư viện chuẩn** của Python (`argparse`, `itertools`, `math`...). Không dùng thư viện FIM có sẵn. Điều này đúng cho cả phần sinh luật kết hợp của chương 3 ([`src/rules.py`](src/rules.py)).
+- `pytest` chỉ cần để chạy kiểm thử; `pandas` và `matplotlib` chỉ cần cho notebook và phần vẽ biểu đồ.
 - Java và `spmf.jar` chỉ cần khi muốn **tự sinh lại** file tham chiếu. Chạy test với ref có sẵn thì không cần.
 - Bản `spmf.jar` hiện tại trên trang SPMF **biên dịch cho Java 25**, bản trước đó (`spmf2.64.jar`) cần Java 21. Java 8 chạy không được, báo `UnsupportedClassVersionError`.
 
@@ -115,9 +116,13 @@ python -m pytest tests/test_benchmark.py -v -s
 
 # chỉ kiểm tra tính đúng trên các CSDL nhỏ
 python -m pytest tests/test_correctness.py -v
+
+# chỉ phần chương 3 (luật kết hợp, loader giỏ hàng) — không cần SPMF, chạy dưới 2 giây
+python -m pytest tests/test_rules.py tests/test_basket.py -v
 ```
 
 - `test_correctness.py` kiểm tra **không cần SPMF**: số tập phổ biến tính tay, bản tối ưu giống bản cơ bản, ví dụ bài báo, xử lý item lặp và dòng trống.
+- `test_rules.py` và `test_basket.py` (chương 3) cũng **không cần SPMF**. Phần lớn test chạy trên CSDL 4 giao dịch viết thẳng trong file, mọi giá trị confidence và lift là phân số đẹp nên kiểm được bằng tay; phần còn lại đối chiếu với các giá trị đã công bố của bộ Groceries.
 - Các test **so với SPMF** cần file tham chiếu trong `data/output/ref/`. Thư mục `data/output/` **không nằm trong repo**, nên lần đầu chạy các test này sẽ bị `SKIPPED`. Muốn chạy đầy đủ, làm theo mục "So sánh với SPMF" bên dưới để sinh ref.
 - `test_benchmark.py` chạy **cả bản cơ bản và bản tối ưu** trên Mushroom, Chess, kiểm tra hai bản cho kết quả giống nhau, rồi ghi thời gian vào `data/output/benchmark_log.csv`. Mất khoảng 4 phút và cần ref.
 
@@ -148,6 +153,99 @@ Vài điểm cần nắm khi đọc số liệu:
 - Nó cũng **tự sinh file ref** khi chạy SPMF, nên không cần chạy `make_refs.py` riêng. Thiếu `tool/spmf.jar`, hoặc Java trên máy cũ hơn bản jar, thì hai cột `t_spmf_s`, `match_pct` để trống và phần còn lại vẫn đo được; script nói rõ lý do ở dòng cuối và tắt SPMF ngay từ ca đầu thay vì thử lại 28 lần. Khắc phục rồi thì chạy lại với `--force`.
 - **Thời gian SPMF** lấy từ dòng `Total time` do chính SPMF in ra, không tính thời gian khởi động JVM. Thời gian của nhóm cũng chỉ tính phần thuật toán, không tính đọc file.
 - `exp_scalability.py` trộn giao dịch một lần bằng `random.Random(42)` rồi lấy tiền tố, nên các tập con **lồng nhau** và cố định qua mọi lần chạy. minsup giữ ở dạng tương đối nên `min_count` giảm theo kích thước tập con.
+
+## Chương 3 — Ứng dụng 1: phân tích giỏ hàng
+
+Đề cho chọn một trong hai hướng cho Ứng dụng 1; nhóm chọn **hướng A — Market Basket Analysis**: từ các tập phổ biến do FP-Growth của nhóm sinh ra, sinh **luật kết hợp** thỏa minsup và minconf, lấy **top 10 luật theo lift** và giải thích ý nghĩa kinh doanh.
+
+Toàn bộ kết quả do cài đặt của nhóm sinh ra. Phần sinh luật ([`src/rules.py`](src/rules.py)) chỉ dùng thư viện chuẩn và **không import gì từ `src.algorithm`** — nó chỉ tiêu thụ dict kết quả của `fpgrowth`, nên phân tầng `algorithm → structures → utils` không bị động tới.
+
+### Dữ liệu
+
+| CSDL | Vai trò | Quy mô |
+|---|---|---|
+| `data/app1/groceries.csv` | CSDL **chính** — item có tên đọc được nên mới diễn giải được ý nghĩa kinh doanh | 9.835 giỏ, 169 mặt hàng, giỏ dài trung bình 4,41 |
+| `data/benchmark/retail.txt` | CSDL **phụ** — chạy ở quy mô thật, nối lại số liệu chương 2 | 88.162 giỏ, 16.470 mặt hàng |
+
+Retail đã bị ẩn danh thành số nên chỉ dùng cho phân tích định lượng. Nguồn của Groceries ghi trong [`data/app1/README.md`](data/app1/README.md).
+
+### Lệnh chạy
+
+```bash
+# phân tích đầy đủ, in bảng top 10 theo lift (mặc định minsup 0,01, minconf 0,3)
+python -m scripts.app1_basket
+
+# ca kiểm chứng: phải ra đúng 15 luật
+python -m scripts.app1_basket --minsup 0.01 --minconf 0.5
+
+# xếp theo tiêu chí khác, hoặc bỏ giới hạn số món bên phải luật
+python -m scripts.app1_basket --top 20 --sort-by leverage
+python -m scripts.app1_basket --max-consequent 0
+
+# CSDL lớn
+python -m scripts.app1_basket --dataset retail
+
+# quét ngưỡng + null model
+python -m scripts.app1_curves
+python -m scripts.app1_curves --dataset retail
+```
+
+| Script | CSV | Các cột |
+|---|---|---|
+| `app1_basket.py` | `data/output/app1/rules_<csdl>_<minsup>_<minconf>.csv` | `antecedent, consequent, n_antecedent, n_consequent, support_count, support, confidence, lift, leverage` |
+| `app1_basket.py` | `data/output/app1/itemsets_<csdl>_<minsup>.txt` | tập phổ biến, định dạng SPMF |
+| `app1_basket.py` | `data/output/app1/code_<csdl>.csv` | `item, code` — bảng mã, chỉ sinh cho CSDL có item dạng tên |
+| `app1_curves.py` | `data/output/app1/curves_<csdl>.csv` | `dataset, minsup, minconf, min_count, itemsets, rules, max_lift, median_lift, max_leverage` |
+| `app1_curves.py` | `data/output/app1/nullmodel_<csdl>.csv` | `dataset, minsup, minconf, kind, replicate, itemsets, rules, max_lift, rules_lift_gt_1_5` |
+
+Trong CSV luật, các item của một vế ghép bằng dấu `|` chứ không phải dấu phẩy, vì dấu phẩy là dấu phân cột và tên món Groceries có dấu cách. `itemsets_*.txt` ghi từ dict **đã mã hóa** (item là số) để đúng định dạng SPMF; tra ngược tên món bằng `code_<csdl>.csv`.
+
+### Bốn mốc kiểm chứng
+
+Nhóm đối chiếu **kết quả số** với các giá trị đã được công bố cùng bộ Groceries. Không đọc, không chạy, không dịch mã nguồn của bất kỳ cài đặt nào.
+
+| Mốc | Nhóm tính được | Giá trị công bố |
+|---|---|---|
+| support(`whole milk`) | 2513 / 9835 = 0,25552 | 0,25552 |
+| `{other vegetables, yogurt} → {whole milk}` | sup 0,02227 · conf 0,51288 · lift 2,00723 | 0,02226 · 0,5128 · 2,0072 |
+| số luật tại minsup 0,01 và minconf 0,5 | 15 | 15 |
+| số luật tại minsup 0,001 và minconf 0,8 | 410 | 410 |
+
+Khớp ở cả hai đầu của dải tham số (333 và 13.492 tập phổ biến) nên khó mà đúng do may. Bốn mốc này được khẳng định trong `tests/test_rules.py` và `tests/test_basket.py`.
+
+### Top 10 luật theo lift (Groceries, minsup 0,01, minconf 0,3)
+
+| # | Luật | support | conf | lift | leverage |
+|---|---|---|---|---|---|
+| 1 | {citrus fruit, other vegetables} → {root vegetables} | 0,0104 | 0,359 | 3,295 | 0,00722 |
+| 2 | {other vegetables, tropical fruit} → {root vegetables} | 0,0123 | 0,343 | 3,145 | 0,00839 |
+| 3 | {beef} → {root vegetables} | 0,0174 | 0,331 | 3,040 | 0,01167 |
+| 4 | {citrus fruit, root vegetables} → {other vegetables} | 0,0104 | 0,586 | 3,030 | 0,00695 |
+| 5 | {root vegetables, tropical fruit} → {other vegetables} | 0,0123 | 0,585 | 3,021 | 0,00823 |
+| 6 | {other vegetables, whole milk} → {root vegetables} | 0,0232 | 0,310 | 2,842 | 0,01503 |
+| 7 | {curd, whole milk} → {yogurt} | 0,0101 | 0,385 | 2,761 | 0,00642 |
+| 8 | {rolls/buns, root vegetables} → {other vegetables} | 0,0122 | 0,502 | 2,595 | 0,00750 |
+| 9 | {root vegetables, yogurt} → {other vegetables} | 0,0129 | 0,500 | 2,584 | 0,00792 |
+| 10 | {tropical fruit, whole milk} → {yogurt} | 0,0151 | 0,358 | 2,568 | 0,00925 |
+
+Diễn giải đầy đủ nằm trong [`notebooks/app1_basket.ipynb`](notebooks/app1_basket.ipynb), mục 5.
+
+### Null model
+
+Để kiểm xem các luật trên có phải chỉ là hệ quả của việc vài món bán rất chạy hay không, `app1_curves.py` dựng một CSDL đối chứng bằng cách **trộn món giữa các giỏ** nhưng giữ **chính xác** tần suất từng món và độ dài từng giỏ (seed 42), rồi chạy lại đúng `fpgrowth` đó.
+
+| | số luật | lift lớn nhất | số luật lift > 1,5 |
+|---|---|---|---|
+| Groceries, dữ liệu thật | 125 | 3,295 | 108 |
+| Groceries, trung vị 5 lần trộn | 11 | 1,733 | 5 |
+| **tỉ số** | **11,4×** | 1,9× | **21,6×** |
+| Retail, dữ liệu thật | 6.365 | 338,34 | 1.506 |
+| Retail, trung vị 5 lần trộn | 4.177 | 2,68 | 2.175 |
+| **tỉ số** | 1,5× | **126,2×** | **0,69×** |
+
+Trên Groceries kết luận rõ ràng: dữ liệu thật sinh ra gấp hơn 20 lần số luật có lift mạnh, nên các mẫu tìm được phản ánh hành vi mua cùng nhau thật.
+
+Trên Retail thì **không**, và đây là một **kết quả âm đáng báo cáo**: số luật gần như không giảm, và số luật có lift > 1,5 của dữ liệu trộn còn *nhiều hơn* dữ liệu thật. CSDL này quá thưa (độ dày 0,0006) nên hai món ngẫu nhiên rơi cùng giỏ cũng đủ vượt lift 1,5 — tức ngưỡng đó không chứng minh được gì. Chỉ phần đỉnh của phân bố lift mới tách ra. Vì vậy `compare_real_vs_shuffled` cố ý in cả ba tỉ số và chỉ ra thống kê nào tách tốt nhất, thay vì viết sẵn một câu kết luận.
 
 ## So sánh với SPMF
 
@@ -211,17 +309,23 @@ Group_23/
 ├── src/
 │   ├── __init__.py
 │   ├── utils.py              # đọc/ghi file SPMF, đếm support, sắp xếp giao dịch, so sánh kết quả, encode/decode item
-│   ├── config.py             # CSDL benchmark, danh sách minsup, đường dẫn kết quả, to_min_count
+│   ├── config.py             # CSDL benchmark, danh sách minsup, đường dẫn kết quả, to_min_count, tham số Ứng dụng 1
 │   ├── structures.py         # FPNode, dựng FP-tree, prefix path, conditional FP-tree
-│   └── algorithm/
+│   ├── rules.py              # sinh luật kết hợp: support, confidence, lift, leverage (chương 3)
+│   ├── algorithm/
+│   │   ├── __init__.py
+│   │   ├── fpgrowth.py       # FP-Growth + tối ưu single path (bản chính) và CLI
+│   │   └── fpgrowth_basic.py # bản cơ bản, không tối ưu (mốc so sánh)
+│   └── apps/
 │       ├── __init__.py
-│       ├── fpgrowth.py       # FP-Growth + tối ưu single path (bản chính) và CLI
-│       └── fpgrowth_basic.py # bản cơ bản, không tối ưu (mốc so sánh)
+│       └── basket.py         # đọc dữ liệu giỏ hàng dạng chữ, thống kê, null model (chương 3)
 ├── tests/
 │   ├── __init__.py
 │   ├── conftest.py           # bật UTF-8 cho output của pytest -s
 │   ├── test_correctness.py   # đúng đắn trên CSDL nhỏ, so với SPMF
 │   ├── test_encode.py        # mã hóa item dạng chữ sang số và giải mã ngược
+│   ├── test_basket.py        # loader giỏ hàng, null model, mốc Groceries
+│   ├── test_rules.py         # luật kết hợp: giá trị tính tay, bất biến, mốc Groceries
 │   └── test_benchmark.py     # Mushroom, Chess: đúng đắn + thời gian basic vs optimized
 ├── scripts/
 │   ├── __init__.py
@@ -229,17 +333,22 @@ Group_23/
 │   ├── compare_spmf.py       # so sánh 2 file kết quả
 │   ├── exp_runtime.py        # thời gian, số itemset, correctness theo minsup
 │   ├── exp_scalability.py    # thời gian theo kích thước CSDL
+│   ├── app1_basket.py        # Ứng dụng 1: phân tích giỏ hàng đầu-cuối, bảng top theo lift
+│   ├── app1_curves.py        # Ứng dụng 1: quét ngưỡng và null model
 │   └── run_toy_compare.py    # so bản basic và optimized trên các CSDL toy
 ├── data/
 │   ├── toy/                  # CSDL nhỏ để kiểm thử nhanh (toy_test1..4)
 │   ├── benchmark/            # chess.txt, mushroom.txt, retail.txt, T10I4D100K.txt
+│   ├── app1/                 # groceries.csv + README ghi nguồn (Ứng dụng 1)
 │   └── output/               # KHÔNG nằm trong repo, được sinh khi chạy
 │       ├── ref/              # kết quả tham chiếu do SPMF sinh ra (scripts/make_refs.py)
 │       ├── mine/             # kết quả của nhóm
 │       ├── exp/              # CSV số liệu thực nghiệm chương 2
+│       ├── app1/             # CSV luật kết hợp và null model (chương 3)
 │       └── benchmark_log.csv # thời gian đo được (test_benchmark.py)
 ├── notebooks/
-│   └── demo.ipynb            # demo chạy trên Google Colab
+│   ├── demo.ipynb            # demo chạy trên Google Colab (ghép ở giai đoạn cuối)
+│   └── app1_basket.ipynb     # Ứng dụng 1: phân tích giỏ hàng, chạy sạch đầu-cuối
 ├── docs/
 │   ├── Report.pdf            # báo cáo
 │   └── references/
@@ -291,6 +400,8 @@ Số liệu chi tiết nằm trong `data/output/benchmark_log.csv`.
 - Thuật toán xác định (deterministic): không dùng số ngẫu nhiên, thứ tự item luôn cố định nhờ tiêu chí phụ khi support bằng nhau.
 - Toàn bộ dữ liệu benchmark tải từ trang SPMF Datasets, xem mục [Dữ liệu benchmark](#dữ-liệu-benchmark). Lưu ý bản Mushroom dùng có **8.416 giao dịch**, đúng bằng con số SPMF công bố; con số 8.124 hay gặp là của bản UCI gốc.
 - Muốn chạy lại toàn bộ benchmark: `python -m pytest tests/test_benchmark.py -v -s`.
+- Phần chương 3 có hai chỗ ngẫu nhiên (trộn giỏ cho null model), cả hai đều dùng `SEED = 42` trong [`src/config.py`](src/config.py); mọi ngưỡng minsup/minconf cũng chốt ở đó. Chạy lại Ứng dụng 1: `python -m scripts.app1_basket` rồi `python -m scripts.app1_curves`.
+- Notebook [`notebooks/app1_basket.ipynb`](notebooks/app1_basket.ipynb) chạy được từ đầu tới cuối sau khi Restart runtime, không phụ thuộc `data/output/` (tự tính lại số liệu tại chỗ). Ô đầu tự nhận biết đang chạy trên Colab hay trên máy cá nhân.
 
 ## Xử lý sự cố thường gặp
 
@@ -308,4 +419,8 @@ Số liệu chi tiết nằm trong `data/output/benchmark_log.csv`.
 
 1. J. Han, J. Pei, Y. Yin, R. Mao. *Mining Frequent Patterns without Candidate Generation: A Frequent-Pattern Tree Approach.* Data Mining and Knowledge Discovery, 8, 53-87, 2004.
 2. P. Fournier-Viger et al. *SPMF: An Open-Source Data Mining Library.* https://www.philippe-fournier-viger.com/spmf/
-3. _bổ sung thêm các tài liệu dùng trong báo cáo_
+3. R. Agrawal, R. Srikant. *Fast Algorithms for Mining Association Rules.* VLDB 1994. — định nghĩa luật kết hợp, support và confidence.
+4. S. Brin, R. Motwani, J. D. Ullman, S. Tsur. *Dynamic Itemset Counting and Implication Rules for Market Basket Data.* SIGMOD 1997. — lift (interest).
+5. M. Hahsler, B. Grün, K. Hornik. *arules — A Computational Environment for Mining Association Rules and Frequent Item Sets.* Journal of Statistical Software, 14(15), 2005. — nguồn dữ liệu Groceries và các giá trị số dùng để kiểm chứng (không phải nguồn mã nguồn).
+6. P.-N. Tan, M. Steinbach, V. Kumar. *Introduction to Data Mining.* — chương về interestingness measures (lift, leverage, conviction).
+7. _bổ sung thêm các tài liệu dùng trong báo cáo_

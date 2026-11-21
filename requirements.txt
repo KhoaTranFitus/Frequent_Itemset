@@ -1,1 +1,8 @@
+# Phần thuật toán (src/algorithm, src/structures, src/utils, src/rules) chỉ dùng
+# THƯ VIỆN CHUẨN của Python. Các gói dưới đây chỉ phục vụ kiểm thử, notebook và
+# vẽ biểu đồ, đúng ràng buộc của đề (ngoài thư viện chuẩn chỉ được numpy, pandas,
+# bitarray; matplotlib dùng để vẽ biểu đồ mà đề yêu cầu ở chương 2 và 3).
 pytest>=8.0
+numpy>=1.24
+pandas>=2.0
+matplotlib>=3.7
