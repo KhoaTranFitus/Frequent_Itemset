@@ -5,8 +5,9 @@ trước khi chạy fpgrowth, nên phần mã hóa này cần đúng và tái l�
 """
 import math
 
-from src.utils import encode, decode, invert_code
+from src.utils import encode, decode, invert_code, save_code, load_code
 from src.algorithm.fpgrowth import fpgrowth
+
 
 # giỏ hàng nhỏ, item là chữ
 BASKETS = [
@@ -56,6 +57,12 @@ def test_empty_input():
     encoded, code = encode([])
     assert encoded == [] and code == {}
 
+def test_mixed_types_are_deterministic():
+    data = [[1, "1", "a"], ["b", 2]]
+    _, code1 = encode(data)
+    _, code2 = encode(list(reversed(data)))
+    assert code1 == code2
+    assert code1 == {1:1,2:2,"1":3,"a":4, "b":5}
 
 def test_mixed_types_do_not_crash():
     # dữ liệu lẫn số và chữ vẫn mã hóa được (sắp theo chuỗi)
@@ -84,3 +91,11 @@ def test_decoded_itemsets_are_sorted_by_name():
     encoded, code = encode(BASKETS)
     for itemset in decode(fpgrowth(encoded, 2), code):
         assert list(itemset) == sorted(itemset)
+
+
+def test_save_load_code_round_trip(tmp_path):
+    # tên có dấu cách, tiếng Việt và cả số đều phải đọc lại đúng kiểu
+    _, code = encode([["whole milk", "bánh mì"], [5, 7]])
+    path = tmp_path / "code.json"
+    save_code(code, path)
+    assert load_code(path) == code

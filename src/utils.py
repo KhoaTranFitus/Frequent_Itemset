@@ -1,3 +1,4 @@
+import json
 
 def read_transactions(path):
     # TODO: đọc từng dòng, tách bằng dấu cách, trả về list các list item
@@ -94,7 +95,7 @@ def encode(transactions, start=1):
     try:
         names = sorted(names)              # số sắp theo giá trị, chữ sắp theo a-z
     except TypeError:
-        names = sorted(names, key=str)     # dữ liệu lẫn nhiều kiểu thì sắp theo chuỗi
+        names = sorted(names, key= lambda x: (type(x).__name__,str(x)))     # dữ liệu lẫn nhiều kiểu thì sắp theo chuỗi
 
     code = {name: i for i, name in enumerate(names, start=start)}
     encoded = [[code[item] for item in t] for t in transactions]
@@ -132,4 +133,18 @@ if __name__ == "__main__":
     for t in data:
         print(order_transaction(t, rank))
 
-    
+def save_code(code, path):
+    """Ghi bảng mã ra file JSON dạng danh sách cặp [item gốc, số].
+
+    Không lưu thẳng dict vì JSON luôn đổi khóa thành chuỗi: item số 5 sẽ
+    thành "5" khi đọc lại. Lưu dạng cặp thì giữ được kiểu của item.
+    """
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(list(code.items()), f, ensure_ascii=False)
+
+
+def load_code(path):
+    """Đọc lại bảng mã do save_code ghi: trả về dict {item gốc: số}."""
+    with open(path, encoding="utf-8") as f:
+        pairs = json.load(f)
+    return {item: num for item, num in pairs}
