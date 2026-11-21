@@ -79,6 +79,50 @@ def compare (mine, ref):
     return matched, unmatched, extra, missing
 
 
+def encode(transactions, start=1):
+    """Đổi item dạng chữ sang số nguyên để chạy được fpgrowth.
+
+    Trả về (giao dịch đã mã hóa, code), với code = {item gốc: số nguyên}.
+    Số được gán theo thứ tự item đã sắp nên cùng dữ liệu luôn cho cùng bảng mã,
+    đáp ứng yêu cầu tái lập kết quả của đồ án. Mã bắt đầu từ 1 để kết quả ghi ra
+    vẫn đúng định dạng SPMF (item là số nguyên dương).
+
+    Item trùng trong một giao dịch được giữ nguyên, vì fpgrowth tự bỏ trùng khi
+    đếm support.
+    """
+    names = {item for t in transactions for item in t}
+    try:
+        names = sorted(names)              # số sắp theo giá trị, chữ sắp theo a-z
+    except TypeError:
+        names = sorted(names, key=str)     # dữ liệu lẫn nhiều kiểu thì sắp theo chuỗi
+
+    code = {name: i for i, name in enumerate(names, start=start)}
+    encoded = [[code[item] for item in t] for t in transactions]
+    return encoded, code
+
+
+def invert_code(code):
+    """Đổi chiều bảng mã: {item gốc: số} -> {số: item gốc}."""
+    return {num: name for name, num in code.items()}
+
+
+def decode(result, code):
+    """Đổi kết quả fpgrowth về item gốc: {tuple số: support} -> {tuple item gốc: support}.
+
+    Vì encode gán số theo thứ tự item đã sắp, thứ tự số trong mỗi itemset cũng
+    chính là thứ tự item gốc, nên không cần sắp lại.
+
+    Muốn đổi riêng một itemset (ví dụ khi sinh luật kết hợp), lấy bảng mã ngược
+    một lần bằng invert_code rồi dùng trực tiếp:
+
+        name_of = invert_code(code)
+        tuple(name_of[i] for i in itemset)
+    """
+    name_of = invert_code(code)
+    return {tuple(name_of[num] for num in itemset): sup
+            for itemset, sup in result.items()}
+
+
 if __name__ == "__main__":
     data = read_transactions("toy.txt")
     freq = find_frequent_items(data, 3)
