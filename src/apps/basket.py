@@ -12,6 +12,9 @@ bằng invert_code/decode khi trình bày.
 """
 import random
 
+from src.config import APP1_DATASETS, GROCERIES
+from src.utils import encode, invert_code, read_transactions
+
 
 def read_baskets(path, sep=","):
     """Đọc file giỏ hàng dạng chữ, mỗi dòng một giỏ -> list các list tên item.
@@ -95,3 +98,28 @@ def shuffle_keep_marginals(baskets, seed):
         shuffled.append(flat[start:start + len(basket)])
         start += len(basket)
     return shuffled
+
+
+def load_dataset(name):
+    """Đọc một CSDL của Ứng dụng 1 -> (giao dịch đã mã hóa, code, name_of).
+
+    Hai CSDL có hai định dạng khác nhau nên phải đi hai đường, và cả script,
+    notebook lẫn test đều cần đúng một chỗ quyết định việc này:
+
+    - "groceries": item là tên, nên read_baskets rồi encode thành số.
+      code = {tên: số}, name_of = {số: tên} để đổi lại khi trình bày.
+    - "retail": file định dạng SPMF, item đã là số nên read_transactions là xong.
+      code và name_of đều None, nghĩa là "in thẳng item, không cần đổi tên" —
+      đúng kiểu mà src.rules.rule_names nhận.
+
+    Luôn trả về giao dịch mà fpgrowth dùng được ngay.
+    """
+    if name not in APP1_DATASETS:
+        raise ValueError(f"CSDL không hợp lệ: {name}. "
+                         f"Chọn một trong {sorted(APP1_DATASETS)}")
+
+    path = APP1_DATASETS[name]
+    if path == GROCERIES:
+        encoded, code = encode(read_baskets(path))
+        return encoded, code, invert_code(code)
+    return read_transactions(path), None, None
