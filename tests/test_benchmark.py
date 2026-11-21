@@ -1,35 +1,23 @@
 import csv
-import math
 import os
 import statistics
 import time
 
 import pytest
 
+from src.config import cases, ref_path, to_min_count
 from src.utils import read_transactions, read_result, compare
 from src.algorithm.fpgrowth import fpgrowth as fp_opt
 from src.algorithm.fpgrowth_basic import fpgrowth as fp_basic
 
-REF_DIR = "data/output/ref"
 LOG_PATH = "data/output/benchmark_log.csv"
 TIME_LIMIT = 300   # giây, áp dụng cho mỗi bản
 RUNS = 3           # số lần đo, lấy trung vị
 
-# (tên, file input, minsup tương đối)
-CASES = [
-    ("mushroom", "data/benchmark/mushroom.txt", 0.2),
-    ("mushroom", "data/benchmark/mushroom.txt", 0.1),
-    ("mushroom", "data/benchmark/mushroom.txt", 0.05),
-    ("chess",    "data/benchmark/chess.txt",    0.7),
-    ("chess",    "data/benchmark/chess.txt",    0.65),
-    ("chess",    "data/benchmark/chess.txt",    0.55),
-    ("chess",    "data/benchmark/chess.txt",    0.50),
-]
-
-
-def to_min_count(minsup, n):
-    # PHẢI cùng công thức với src/algorithm/fpgrowth.py
-    return math.ceil(round(minsup * n, 9))
+# Lấy thẳng danh sách ca từ src/config.py, không khai báo lại ở đây: trước đó
+# file này dùng chess 0.55 và 0.5, còn config chốt 0.9 đến 0.6, nên make_refs
+# không sinh ref cho hai mức đó và hai test lặng lẽ bị SKIPPED.
+CASES = cases("benchmark")
 
 
 def median_time(fn, data, min_count, runs=RUNS):
@@ -55,11 +43,11 @@ def append_log(row):
 
 @pytest.mark.parametrize("name, path, minsup", CASES)
 def test_benchmark(name, path, minsup):
-    ref_path = f"{REF_DIR}/{name}_{minsup}.txt"
+    ref_file = ref_path(name, minsup)
     if not os.path.exists(path):
         pytest.skip(f"thiếu dữ liệu: {path}")
-    if not os.path.exists(ref_path):
-        pytest.skip(f"thiếu file ref: {ref_path} (chạy SPMF để tạo)")
+    if not os.path.exists(ref_file):
+        pytest.skip(f"thiếu file ref: {ref_file} (chạy SPMF để tạo)")
 
     data = read_transactions(path)
     min_count = to_min_count(minsup, len(data))
@@ -68,7 +56,7 @@ def test_benchmark(name, path, minsup):
     r_opt, t_opt = median_time(fp_opt, data, min_count)
     speedup = t_basic / t_opt
 
-    ref = read_result(ref_path)
+    ref = read_result(ref_file)
     matched, mismatched, extra, missing = compare(r_opt, ref)
     rate = len(matched) / len(ref) * 100
 

@@ -1,13 +1,11 @@
-import math
 import os
 
 import pytest
 
+from src.config import ref_path, to_min_count
 from src.utils import read_transactions, read_result, compare
 from src.algorithm.fpgrowth import fpgrowth
 from src.algorithm.fpgrowth_basic import fpgrowth as fpgrowth_basic
-
-REF_DIR = "data/output/ref"
 
 # (tên, file, minsup, số tập tính tay)
 CASES = [
@@ -19,10 +17,6 @@ CASES = [
     ("test4", "data/toy/toy_test4.txt", 0.3,    6),
     ("test4", "data/toy/toy_test4.txt", 0.2,   13),
 ]
-
-
-def to_min_count(minsup, n):
-    return math.ceil(round(minsup * n, 9))
 
 
 @pytest.mark.parametrize("name, path, minsup, expected", CASES)
@@ -41,12 +35,12 @@ def test_optimized_equals_basic(name, path, minsup, expected):
 
 @pytest.mark.parametrize("name, path, minsup, expected", CASES)
 def test_matches_spmf(name, path, minsup, expected):
-    ref_path = f"{REF_DIR}/{name}_{minsup}.txt"
-    if not os.path.exists(ref_path):
-        pytest.skip(f"thiếu ref: {ref_path}")
+    ref_file = ref_path(name, minsup)
+    if not os.path.exists(ref_file):
+        pytest.skip(f"thiếu ref: {ref_file}")
     data = read_transactions(path)
     mine = fpgrowth(data, to_min_count(minsup, len(data)))
-    matched, mismatched, extra, missing = compare(mine, read_result(ref_path))
+    matched, mismatched, extra, missing = compare(mine, read_result(ref_file))
     assert not mismatched and not extra and not missing
 
 

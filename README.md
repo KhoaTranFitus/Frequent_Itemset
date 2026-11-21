@@ -10,7 +10,7 @@ Cài đặt lại thuật toán **FP-Growth** (Han, Pei, Yin, Mao, 2004) bằng 
 - Demo notebook (Google Colab): _dán link public tại đây_
 - Báo cáo: [`docs/Report.pdf`](docs/Report.pdf)
 - Bài báo gốc: [`docs/references/fpgrowth_04.pdf`](docs/references/fpgrowth_04.pdf)
-- Dữ liệu lớn (nếu có host ngoài repo): _dán link Hugging Face / Kaggle tại đây_
+- Dữ liệu benchmark: cả bốn CSDL nằm trong `data/benchmark/`, xem mục [Dữ liệu benchmark](#dữ-liệu-benchmark)
 - SPMF: https://www.philippe-fournier-viger.com/spmf/
 
 ## Yêu cầu môi trường
@@ -19,6 +19,7 @@ Cài đặt lại thuật toán **FP-Growth** (Han, Pei, Yin, Mao, 2004) bằng 
 - Thuật toán chỉ dùng **thư viện chuẩn** của Python (`argparse`, `itertools`, `math`...). Không dùng thư viện FIM có sẵn.
 - `pytest` chỉ cần để chạy kiểm thử.
 - Java và `spmf.jar` chỉ cần khi muốn **tự sinh lại** file tham chiếu. Chạy test với ref có sẵn thì không cần.
+- Bản `spmf.jar` hiện tại trên trang SPMF **biên dịch cho Java 25**, bản trước đó (`spmf2.64.jar`) cần Java 21. Java 8 chạy không được, báo `UnsupportedClassVersionError`.
 
 ## Cài đặt
 
@@ -79,6 +80,30 @@ min_count = ceil(minsup * số_giao_dịch)
 
 (có làm tròn `round(..., 9)` để tránh sai số số thực, giống cách SPMF làm tròn lên.)
 
+## Dữ liệu benchmark
+
+Cả bốn CSDL benchmark **nằm sẵn trong `data/benchmark/`**, clone về là chạy được ngay, không phải tải gì thêm. Tổng khoảng 9 MB.
+
+| CSDL | Giao dịch | Số item | Độ dài TB | Mật độ | Đặc điểm | Nguồn |
+|---|---|---|---|---|---|---|
+| Chess | 3.196 | 75 | 37,00 | 49,33% | dày đặc, itemset dài | UCI, qua FIMI |
+| Mushroom | 8.416 | 119 | 23,00 | 19,33% | dày đặc, nhiều item | UCI, qua FIMI |
+| Retail | 88.162 | 16.470 | 10,31 | 0,06% | thưa, dữ liệu thật | cửa hàng bán lẻ ở Bỉ, qua FIMI |
+| T10I4D100K | 100.000 | 870 | 10,10 | 1,16% | tổng hợp, thưa | IBM Quest generator |
+
+Các số trên do `src/utils.py` đọc trực tiếp từ file trong repo và khớp với bảng của [SPMF Datasets](https://www.philippe-fournier-viger.com/spmf/datasets.php), thư mục `publicdatasets/`, nơi tải cả bốn file.
+
+**T10I4D100K là dữ liệu tổng hợp**, do IBM Quest Synthetic Data Generator sinh theo thủ tục trong Agrawal và Srikant (1994), không phải dữ liệu thật và không do nhóm sinh ra. Tên file là tham số sinh: `T10` độ dài giao dịch trung bình 10, `I4` độ dài trung bình của mẫu ẩn tiềm năng 4, `D100K` một trăm nghìn giao dịch. Đây đúng là CSDL mà bài báo FP-Growth dùng trong phần thực nghiệm (mục 5 của [`docs/references/fpgrowth_04.pdf`](docs/references/fpgrowth_04.pdf)), nên số liệu của nhóm so sánh được với bài báo gốc.
+
+Danh sách minsup dùng cho thực nghiệm được chốt trong [`src/config.py`](src/config.py), mỗi CSDL 7 mức:
+
+| CSDL | minsup |
+|---|---|
+| Chess | 0,9 · 0,85 · 0,8 · 0,75 · 0,7 · 0,65 · 0,6 |
+| Mushroom | 0,5 · 0,4 · 0,3 · 0,2 · 0,15 · 0,1 · 0,05 |
+| Retail | 0,01 · 0,008 · 0,005 · 0,004 · 0,003 · 0,002 · 0,001 |
+| T10I4D100K | 0,01 · 0,008 · 0,005 · 0,004 · 0,003 · 0,002 · 0,001 |
+
 ## Kiểm thử
 
 ```bash
@@ -96,9 +121,45 @@ python -m pytest tests/test_correctness.py -v
 - Các test **so với SPMF** cần file tham chiếu trong `data/output/ref/`. Thư mục `data/output/` **không nằm trong repo**, nên lần đầu chạy các test này sẽ bị `SKIPPED`. Muốn chạy đầy đủ, làm theo mục "So sánh với SPMF" bên dưới để sinh ref.
 - `test_benchmark.py` chạy **cả bản cơ bản và bản tối ưu** trên Mushroom, Chess, kiểm tra hai bản cho kết quả giống nhau, rồi ghi thời gian vào `data/output/benchmark_log.csv`. Mất khoảng 4 phút và cần ref.
 
+## Thực nghiệm chương 2
+
+Danh sách CSDL, minsup và đường dẫn kết quả lấy từ [`src/config.py`](src/config.py), sửa một chỗ là mọi script đi theo.
+
+```bash
+# thời gian + số itemset + correctness theo minsup (4 CSDL x 7 mức minsup)
+python -m scripts.exp_runtime
+
+# chạy riêng một CSDL, hoặc chạy thử nhanh
+python -m scripts.exp_runtime --dataset retail
+python -m scripts.exp_runtime --group toy --runs 1
+
+# thời gian theo kích thước CSDL (Retail, cắt 10/25/50/75/100%)
+python -m scripts.exp_scalability
+```
+
+| Script | CSV | Các cột |
+|---|---|---|
+| `exp_runtime.py` | `data/output/exp/runtime.csv` | `dataset, minsup, min_count, itemsets, t_basic_s, t_opt_s, t_spmf_s, match_pct` |
+| `exp_scalability.py` | `data/output/exp/scalability.csv` | `dataset, fraction, transactions, minsup, itemsets, t_opt_s` |
+
+Vài điểm cần nắm khi đọc số liệu:
+
+- `exp_runtime.py` **cộng dồn** vào CSV và bỏ qua ca đã có, nên dừng giữa đường rồi chạy lại không mất phần đã làm. Muốn đo lại thì thêm `--force`.
+- Nó cũng **tự sinh file ref** khi chạy SPMF, nên không cần chạy `make_refs.py` riêng. Thiếu `tool/spmf.jar`, hoặc Java trên máy cũ hơn bản jar, thì hai cột `t_spmf_s`, `match_pct` để trống và phần còn lại vẫn đo được; script nói rõ lý do ở dòng cuối và tắt SPMF ngay từ ca đầu thay vì thử lại 28 lần. Khắc phục rồi thì chạy lại với `--force`.
+- **Thời gian SPMF** lấy từ dòng `Total time` do chính SPMF in ra, không tính thời gian khởi động JVM. Thời gian của nhóm cũng chỉ tính phần thuật toán, không tính đọc file.
+- `exp_scalability.py` trộn giao dịch một lần bằng `random.Random(42)` rồi lấy tiền tố, nên các tập con **lồng nhau** và cố định qua mọi lần chạy. minsup giữ ở dạng tương đối nên `min_count` giảm theo kích thước tập con.
+
 ## So sánh với SPMF
 
-Cần **Java** (kiểm tra bằng `java -version`) và file `spmf.jar` đặt vào thư mục `tool/` (tải ở trang SPMF, mục Download; file không nằm trong repo vì nặng).
+Cần **Java 25 trở lên** (kiểm tra bằng `java -version`) và file `spmf.jar` đặt vào thư mục `tool/` (tải ở trang SPMF, mục Download; file không nằm trong repo vì nặng, khoảng 15 MB).
+
+Trang SPMF chỉ còn host bản mới nhất và bản ngay trước đó, nên không tải được bản cũ chạy trên Java 8. Nếu chỉ có Java 21 thì dùng `spmf2.64.jar` và đổi tên thành `tool/spmf.jar`.
+
+Máy có nhiều bản Java và `java` trong PATH lại là bản cũ thì chỉ rõ bản muốn dùng bằng biến `JAVA`:
+
+```bash
+JAVA="C:/Program Files/Java/jdk-25.0.5.0.3/bin/java.exe" python -m scripts.make_refs --group toy
+```
 
 ### Cách 1: sinh toàn bộ ref rồi chạy test (khuyên dùng)
 
@@ -149,7 +210,8 @@ Group_23/
 ├── requirements.txt
 ├── src/
 │   ├── __init__.py
-│   ├── utils.py              # đọc/ghi file SPMF, đếm support, sắp xếp giao dịch, so sánh kết quả
+│   ├── utils.py              # đọc/ghi file SPMF, đếm support, sắp xếp giao dịch, so sánh kết quả, encode/decode item
+│   ├── config.py             # CSDL benchmark, danh sách minsup, đường dẫn kết quả, to_min_count
 │   ├── structures.py         # FPNode, dựng FP-tree, prefix path, conditional FP-tree
 │   └── algorithm/
 │       ├── __init__.py
@@ -157,19 +219,24 @@ Group_23/
 │       └── fpgrowth_basic.py # bản cơ bản, không tối ưu (mốc so sánh)
 ├── tests/
 │   ├── __init__.py
+│   ├── conftest.py           # bật UTF-8 cho output của pytest -s
 │   ├── test_correctness.py   # đúng đắn trên CSDL nhỏ, so với SPMF
+│   ├── test_encode.py        # mã hóa item dạng chữ sang số và giải mã ngược
 │   └── test_benchmark.py     # Mushroom, Chess: đúng đắn + thời gian basic vs optimized
 ├── scripts/
 │   ├── __init__.py
 │   ├── make_refs.py          # chạy SPMF để sinh file tham chiếu
 │   ├── compare_spmf.py       # so sánh 2 file kết quả
+│   ├── exp_runtime.py        # thời gian, số itemset, correctness theo minsup
+│   ├── exp_scalability.py    # thời gian theo kích thước CSDL
 │   └── run_toy_compare.py    # so bản basic và optimized trên các CSDL toy
 ├── data/
 │   ├── toy/                  # CSDL nhỏ để kiểm thử nhanh (toy_test1..4)
-│   ├── benchmark/            # chess.txt, mushroom.txt
+│   ├── benchmark/            # chess.txt, mushroom.txt, retail.txt, T10I4D100K.txt
 │   └── output/               # KHÔNG nằm trong repo, được sinh khi chạy
 │       ├── ref/              # kết quả tham chiếu do SPMF sinh ra (scripts/make_refs.py)
 │       ├── mine/             # kết quả của nhóm
+│       ├── exp/              # CSV số liệu thực nghiệm chương 2
 │       └── benchmark_log.csv # thời gian đo được (test_benchmark.py)
 ├── notebooks/
 │   └── demo.ipynb            # demo chạy trên Google Colab
@@ -222,7 +289,7 @@ Số liệu chi tiết nằm trong `data/output/benchmark_log.csv`.
 ## Tái lập kết quả
 
 - Thuật toán xác định (deterministic): không dùng số ngẫu nhiên, thứ tự item luôn cố định nhờ tiêu chí phụ khi support bằng nhau.
-- Dữ liệu Chess và Mushroom tải từ SPMF Datasets hoặc FIMI Repository. Lưu ý bản Mushroom dùng có **8.416 giao dịch** (khác con số 8.124 của một số nguồn).
+- Toàn bộ dữ liệu benchmark tải từ trang SPMF Datasets, xem mục [Dữ liệu benchmark](#dữ-liệu-benchmark). Lưu ý bản Mushroom dùng có **8.416 giao dịch**, đúng bằng con số SPMF công bố; con số 8.124 hay gặp là của bản UCI gốc.
 - Muốn chạy lại toàn bộ benchmark: `python -m pytest tests/test_benchmark.py -v -s`.
 
 ## Xử lý sự cố thường gặp
@@ -233,6 +300,7 @@ Số liệu chi tiết nằm trong `data/output/benchmark_log.csv`.
 | `FileNotFoundError` khi đọc dữ liệu | Sai đường dẫn tương đối | Chạy từ thư mục gốc |
 | Test bị `SKIPPED` | Chưa có file ref (thư mục `data/output/` không nằm trong repo) | Chạy `python -m scripts.make_refs --group toy` (và `--group benchmark`) |
 | `'java' is not recognized` | Chưa cài Java | Cài JDK/JRE rồi mở terminal mới |
+| `UnsupportedClassVersionError ... class file version 69.0` | Java trên máy cũ hơn bản `spmf.jar` đang dùng (69 là Java 25, 65 là Java 21, 52 là Java 8) | Cài Java 25 trở lên, hoặc dùng bản `spmf.jar` cũ hơn khớp với Java đang có |
 | `Unable to access jarfile spmf.jar` | Chưa có `spmf.jar` | Tải về và đặt vào `tool/` |
 | `error: --minsup phải nằm trong khoảng (0, 1]` | Giá trị minsup không hợp lệ | Dùng minsup tương đối, ví dụ `0.4` |
 
