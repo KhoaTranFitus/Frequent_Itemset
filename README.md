@@ -124,7 +124,43 @@ python -m pytest tests/test_rules.py tests/test_basket.py -v
 - `test_correctness.py` kiểm tra **không cần SPMF**: số tập phổ biến tính tay, bản tối ưu giống bản cơ bản, ví dụ bài báo, xử lý item lặp và dòng trống.
 - `test_rules.py` và `test_basket.py` (chương 3) cũng **không cần SPMF**. Phần lớn test chạy trên CSDL 4 giao dịch viết thẳng trong file, mọi giá trị confidence và lift là phân số đẹp nên kiểm được bằng tay; phần còn lại đối chiếu với các giá trị đã công bố của bộ Groceries.
 - Các test **so với SPMF** cần file tham chiếu trong `data/output/ref/`. Thư mục `data/output/` **không nằm trong repo**, nên lần đầu chạy các test này sẽ bị `SKIPPED`. Muốn chạy đầy đủ, làm theo mục "So sánh với SPMF" bên dưới để sinh ref.
-- `test_benchmark.py` chạy **cả bản cơ bản và bản tối ưu** trên Mushroom, Chess, kiểm tra hai bản cho kết quả giống nhau, rồi ghi thời gian vào `data/output/benchmark_log.csv`. Mất khoảng 4 phút và cần ref.
+- `test_benchmark.py` chạy **cả bản cơ bản và bản tối ưu** trên Mushroom, Chess, retail, T10I4D100K, kiểm tra hai bản cho kết quả giống nhau, rồi ghi thời gian vào `data/output/benchmark_log.csv`. Mất khoảng 6 phút và cần ref.
+
+### Output của lần chạy test cuối cùng
+
+Chạy ngày 21/11/2026, sau khi đã sinh đủ file ref bằng `python -m scripts.make_refs --group all`:
+
+```
+$ python -m pytest tests -q
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0
+rootdir: C:\Users\PC\Downloads\24127127-local\Frequent_Itemset
+plugins: anyio-4.11.0
+collected 96 items
+
+........................................................................ [ 75%]
+........................                                                 [100%]
+
+96 passed in 402.90s (0:06:42)
+```
+
+| File test | Số test | Nội dung |
+|---|---|---|
+| `test_correctness.py` | 23 | 7 ca toy: số tập phổ biến tính tay, basic == optimized, so với SPMF; ví dụ bài báo; item lặp và dòng trống |
+| `test_benchmark.py` | 28 | 4 CSDL benchmark × 7 minsup: basic == optimized, khớp SPMF 100% |
+| `test_encode.py` | 10 | mã hóa item dạng chữ sang số và giải mã ngược |
+| `test_basket.py` | 9 | loader giỏ hàng, null model, mốc Groceries (9.835 giỏ, 169 món, support whole milk = 2513) |
+| `test_rules.py` | 26 | luật kết hợp: giá trị tính tay, bất biến toán học, trường hợp biên, mốc Groceries (15 và 410 luật) |
+| **Tổng** | **96** | |
+
+Chạy trên máy mới clone về, chưa có file ref, thì 35 test so với SPMF bị `SKIPPED` còn 61 test kia vẫn phải xanh hết — và chỉ mất khoảng 1 giây vì phần lâu nhất (`test_benchmark.py`) nằm trong nhóm bị skip:
+
+```
+$ python -m pytest tests -q
+.........ssssssssssssssssssssssssssss..............sssssss.............. [ 75%]
+........................                                                 [100%]
+61 passed, 35 skipped in 1.14s
+```
 
 ## Thực nghiệm chương 2
 
