@@ -1,0 +1,5 @@
+dataset,minsup,peak_basic_mb,peak_opt_mb
+chess,0.75,4.20,3.15
+mushroom,0.2,10.66,8.37
+retail,0.004,39.91,39.82
+T10I4D100K,0.004,204.63,204.66
