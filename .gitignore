@@ -7,6 +7,7 @@ out*.txt
 ref.txt
 lessons/
 tool/
+docs/app2_note.md
 ~$*
 
 # kết quả của người chạy và ref lớn
