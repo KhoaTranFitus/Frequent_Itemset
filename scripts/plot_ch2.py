@@ -19,7 +19,11 @@ def load(name):
     if not os.path.exists(path):
         print(f"[bỏ qua] chưa có {path}")
         return None
-    return pd.read_csv(path)
+    df = pd.read_csv(path)
+    # phòng hờ CSV cũ có ca bị ghi hai lần: chỉ giữ lần đo sau cùng của mỗi ca
+    if name == "runtime":
+        df = df.drop_duplicates(["dataset", "minsup"], keep="last")
+    return df
 
 
 def save(fig, name):
