@@ -8,6 +8,7 @@ ref.txt
 lessons/
 tool/
 docs/app2_note.md
+data/output/exp/runtime_colab.csv
 ~$*
 
 # kết quả của người chạy và ref lớn
