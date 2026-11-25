@@ -36,7 +36,7 @@ def main():
     # 2. Top-K itemset có support cao nhất của mỗi nhóm, tại TOP_MINSUP
     for label, data in groups.items():
         result = fpgrowth(data, to_min_count(TOP_MINSUP, len(data)))
-        named = decode(result, code)
+        named = decode(result, code)                # decode sang tên, sắp xếp theo support giảm dần
         top = sorted(named.items(), key=lambda x: x[1], reverse=True)[:TOP_K]
 
         print(f"\nTop {TOP_K} của {label} (minsup={TOP_MINSUP}, {len(named)} itemset)")
