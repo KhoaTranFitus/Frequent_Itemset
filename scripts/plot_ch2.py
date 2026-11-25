@@ -1,9 +1,10 @@
-"""Vẽ biểu đồ cho thực nghiệm bộ nhớ và độ dài giao dịch (Chương 2, nửa B)."""
+"""Vẽ toàn bộ biểu đồ Chương 2 từ các CSV trong data/output/exp/ vào docs/figures/."""
 import os
 
 import matplotlib
 matplotlib.use("Agg")               # chỉ lưu ảnh, không mở cửa sổ
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter, LogLocator
 import numpy as np
 import pandas as pd
 
@@ -12,6 +13,10 @@ from src.config import EXP_DIR, use_utf8_stdout
 FIG_DIR = "docs/figures"
 DENSE = ["chess", "mushroom"]
 SPARSE = ["retail", "T10I4D100K"]
+
+# trục log: ghi số thường (0.1, 1, 10) thay cho 10^-1, 4×10^0
+SO_THUONG = FuncFormatter(lambda v, _: f"{v:g}")
+
 
 def load(name):
     """Đọc một file CSV kết quả, trả về None nếu chưa có."""
@@ -33,45 +38,62 @@ def save(fig, name):
     plt.close(fig)
     print(f"Đã lưu {path}")
 def plot_memory():
+    """Bộ nhớ đỉnh của bản cơ bản và bản tối ưu tại minsup giữa của mỗi CSDL."""
     df = pd.read_csv(f"{EXP_DIR}/memory.csv")
     x = np.arange(len(df))          # vị trí mỗi nhóm cột: 0, 1, 2, 3
     w = 0.38                        # bề rộng một cột
 
     fig, ax = plt.subplots(figsize=(7, 4))
-    ax.bar(x - w / 2, df["peak_basic_mb"], w, label="basic")
+    ax.bar(x - w / 2, df["peak_basic_mb"], w, label="cơ bản")
     ax.bar(x + w / 2, df["peak_opt_mb"], w, label="tối ưu")
 
     ax.set_xticks(x)
-    ax.set_xticklabels(df["dataset"])
-    ax.set_yscale("log")           # trục log
-    ax.set_ylabel("Peak memory (MB)")
+    ax.set_xticklabels([f"{d}\n(minsup {m})" for d, m in zip(df["dataset"], df["minsup"])])
+    ax.set_yscale("log")           # trục log: T10I4D100K lớn hơn Chess khoảng 50 lần
+    ax.set_ylabel("Bộ nhớ đỉnh (MB, thang log)")
+    ax.set_title("Bộ nhớ đỉnh: bản cơ bản và bản tối ưu (tại minsup giữa)")
+    ax.set_ylim(top=df["peak_basic_mb"].max() * 2.5)    # chừa chỗ cho nhãn % ở cột cao nhất
     ax.legend()
 
-    # ghi % giảm lên trên mỗi cặp cột
+    # ghi % thay đổi lên trên mỗi cặp cột
     for i, row in df.iterrows():
-        giam = (row["peak_basic_mb"] - row["peak_opt_mb"]) / row["peak_basic_mb"] * 100
-        ax.text(i, row["peak_basic_mb"] * 1.15, f"{-giam:+.1f}%", ha="center")
-
-    fig.tight_layout()
-    fig.savefig(f"{FIG_DIR}/memory.png", dpi=200)
+        doi = (row["peak_opt_mb"] - row["peak_basic_mb"]) / row["peak_basic_mb"] * 100
+        ax.text(i, row["peak_basic_mb"] * 1.15, f"{doi:+.1f}%", ha="center")
+    save(fig, "memory")
 
 
 def plot_txlen():
+    """Thời gian và số itemset theo độ dài giao dịch trung bình (CSDL tổng hợp)."""
     df = pd.read_csv(f"{EXP_DIR}/txlen.csv")
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.2))
 
+    # trái: thời gian, trục thường để thấy rõ đường cong tăng phi tuyến
     ax1.plot(df["avg_len"], df["t_opt_s"], marker="o")
+    for x, y in zip(df["avg_len"], df["t_opt_s"]):
+        ax1.annotate(f"{y:.2f}s", (x, y), textcoords="offset points", xytext=(0, 7),
+                     ha="center", fontsize=8)
+    ax1.set_title("(a) Thời gian chạy")
     ax1.set_xlabel("Độ dài giao dịch trung bình")
     ax1.set_ylabel("Thời gian (s)")
-    
+    ax1.set_ylim(0, df["t_opt_s"].max() * 1.15)
+    ax1.grid(alpha=0.3)
 
-    # ax2: vẽ số itemset theo avg_len, trục tung dạng log
-    ax2.plot(df["avg_len"], df["itemsets"], marker = "o")
-    ax2.set_xlabel("Độ dài giao dịch trung bình")
-    ax2.set_ylabel("So luon Itemset")
+    # phải: số itemset, trục log vì tăng theo hàm mũ
+    ax2.plot(df["avg_len"], df["itemsets"], marker="o", color="tab:orange")
+    for x, y in zip(df["avg_len"], df["itemsets"]):
+        ax2.annotate(f"{y:,}".replace(",", "."), (x, y), textcoords="offset points",
+                     xytext=(0, 7), ha="center", fontsize=8)
     ax2.set_yscale("log")
-    fig.tight_layout()
-    fig.savefig(f"{FIG_DIR}/txlen.png", dpi=200)
+    ax2.set_title("(b) Số frequent itemset (thang log)")
+    ax2.set_xlabel("Độ dài giao dịch trung bình")
+    ax2.set_ylabel("Số frequent itemset")
+    ax2.set_ylim(top=df["itemsets"].max() * 3)
+    ax2.grid(alpha=0.3)
+
+    so_gd = f"{int(df['transactions'].iloc[0]):,}".replace(",", ".")   # 10000 -> 10.000
+    fig.suptitle(f"Ảnh hưởng của độ dài giao dịch (CSDL tổng hợp, {so_gd} giao dịch, "
+                 f"minsup {df['minsup'].iloc[0]})")
+    save(fig, "txlen")
 
 
 def plot_runtime():
@@ -84,18 +106,22 @@ def plot_runtime():
     fig, axes = plt.subplots(2, 2, figsize=(10, 7))
     for ax, name in zip(axes.flat, datasets):
         d = df[df["dataset"] == name].sort_values("minsup", ascending=False)
-        ax.plot(d["minsup"], d["t_basic_s"], marker="o", label="basic")
+        ax.plot(d["minsup"], d["t_basic_s"], marker="o", label="cơ bản")
         ax.plot(d["minsup"], d["t_opt_s"], marker="s", label="tối ưu")
         if d["t_spmf_s"].notna().any():          # chỉ vẽ SPMF khi đã có số liệu
             ax.plot(d["minsup"], d["t_spmf_s"], marker="^", label="SPMF")
 
         ax.invert_xaxis()                         # minsup giảm dần từ trái sang phải
         ax.set_yscale("log")
-        ax.set_title(name)
-        ax.set_xlabel("minsup")
-        ax.set_ylabel("Thời gian (s)")
+        ax.yaxis.set_major_locator(LogLocator(base=10, subs=(1, 2, 5)))  # mốc 0.1, 0.2, 0.5, 1, 2, 5...
+        ax.yaxis.set_major_formatter(SO_THUONG)
+        ax.yaxis.set_minor_formatter(FuncFormatter(lambda v, _: ""))   # bỏ nhãn phụ rối mắt
+        ax.set_title(f"{name} ({'dày' if name in DENSE else 'thưa'})")
+        ax.set_xlabel("minsup (giảm dần →)")
+        ax.set_ylabel("Thời gian (s, thang log)")
         ax.grid(alpha=0.3)
         ax.legend()
+    fig.suptitle("Thời gian chạy theo minsup: bản cơ bản, bản tối ưu và SPMF")
     save(fig, "runtime")
 
 
@@ -113,10 +139,11 @@ def plot_itemsets():
         ax.invert_xaxis()
         ax.set_yscale("log")
         ax.set_title(title)
-        ax.set_xlabel("minsup")
-        ax.set_ylabel("Số frequent itemset")
+        ax.set_xlabel("minsup (giảm dần →)")
+        ax.set_ylabel("Số frequent itemset (thang log)")
         ax.grid(alpha=0.3)
         ax.legend()
+    fig.suptitle("Số frequent itemset theo minsup")
     save(fig, "itemsets")
 
 

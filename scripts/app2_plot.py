@@ -8,6 +8,7 @@ import os
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 import numpy as np
 
 from scripts.app2_emerging import emerging
@@ -46,16 +47,18 @@ def plot_profile(rows):
     ticks = [0, 5, 10, 15, 20, 25, 30, 34, 39, 44, 49, 54, 59]
     axes[-1].set_xticks(ticks)
     axes[-1].set_xticklabels([position_name(i) for i in ticks])
-    axes[-1].set_xlabel("Vị trí so với ranh giới")
+    axes[-1].set_xlabel("Vị trí so với ranh giới (vạch đỏ = ranh giới, giữa -1 và +1)")
+    fig.suptitle("Tỉ lệ từng nucleotide tại mỗi vị trí, theo nhóm (càng đậm càng phổ biến)")
     fig.colorbar(im, ax=axes, label="Tỉ lệ mẫu")
     fig.savefig(f"{FIG_DIR}/app2_profile.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
     print(f"Đã lưu {FIG_DIR}/app2_profile.png")
 
 
-def plot_emerging(groups, code, top_k=8):
+def plot_emerging(groups, code, top_k=8, min_n=5):
+    """Top emerging pattern theo growth. Thanh xám: #N < min_n, growth không ổn định."""
     name_of = invert_code(code)
-    fig, axes = plt.subplots(1, 2, figsize=(13, 4.5))
+    fig, axes = plt.subplots(1, 2, figsize=(14, 4.8))
     for ax, label in zip(axes, ["EI", "IE"]):
         rows = emerging(groups[label], groups["N"], 0.5)
         rows.sort(key=lambda r: (r[3], r[1]), reverse=True)
@@ -63,14 +66,24 @@ def plot_emerging(groups, code, top_k=8):
 
         names = [", ".join(name_of[i] for i in r[0]) for r in rows]
         growth = [r[3] for r in rows]
-        ax.barh(names, growth)
+        mau = ["tab:blue" if r[4] >= min_n else "lightgray" for r in rows]
+        ax.barh(names, growth, color=mau)
         for y, r in enumerate(rows):
-            ax.text(r[3] * 1.1, y, f"#N={r[4]}", va="center", fontsize=8)
+            ax.text(r[3] * 1.08, y, f"{r[3]:.1f}  (#N={r[4]})", va="center", fontsize=8)
 
         ax.set_xscale("log")
-        ax.set_xlabel(f"Growth rate ({label} so với N, thang log)")
-        ax.set_title(f"Top emerging pattern của {label}")
-    fig.tight_layout()
+        ax.set_xlim(right=max(growth) * 4)            # chừa chỗ cho nhãn, không bị cắt
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+        ax.xaxis.set_minor_formatter(FuncFormatter(lambda v, _: ""))
+        ax.set_xlabel(f"Growth rate = sup({label}) / sup(N), thang log")
+        ax.set_title(f"Top {top_k} emerging pattern của {label} so với N (minsup 0,5)")
+
+    # chú thích màu dùng chung
+    from matplotlib.patches import Patch
+    fig.legend(handles=[Patch(color="tab:blue", label=f"#N ≥ {min_n}: đáng tin"),
+                        Patch(color="lightgray", label=f"#N < {min_n}: growth không ổn định")],
+               loc="lower center", ncol=2, frameon=False)
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
     fig.savefig(f"{FIG_DIR}/app2_emerging.png", dpi=200)
     plt.close(fig)
     print(f"Đã lưu {FIG_DIR}/app2_emerging.png")
