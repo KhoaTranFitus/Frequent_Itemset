@@ -7,10 +7,12 @@ out*.txt
 ref.txt
 lessons/
 tool/
+docs/app2_note.md
 ~$*
 
 # kết quả của người chạy và ref lớn
-data/output/
+data/output/*
+!data/output/exp/
 # file hướng dẫn cho Claude Code, không đưa vào repo
 CLAUDE.md
 .claude/

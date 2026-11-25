@@ -12,12 +12,16 @@ Chạy từ thư mục gốc repo:
     python -m scripts.exp_runtime --skip-basic           # bỏ bản cơ bản
     python -m scripts.exp_runtime --force                # chạy lại ca đã có trong CSV
 
+    # bản nhẹ cho notebook: 1 lần, chỉ bản tối ưu, không SPMF, ghi ra file riêng
+    python -m scripts.exp_runtime --runs 1 --skip-basic --skip-spmf --csv data/output/exp/runtime_colab.csv
+
 Máy có nhiều bản Java thì chỉ rõ bản chạy SPMF bằng biến JAVA (xem src/config.py):
     JAVA="C:/Program Files/Java/jdk-25.0.5.0.3/bin/java.exe" python -m scripts.exp_runtime
 
-Kết quả ghi vào data/output/exp/runtime.csv, cộng dồn theo từng ca nên dừng giữa
-đường rồi chạy lại không mất phần đã làm (ca đã có trong CSV bị bỏ qua, trừ khi
-có --force).
+Kết quả ghi vào data/output/exp/runtime.csv (hoặc file chỉ định bằng --csv), lưu
+sau từng ca nên dừng giữa đường rồi chạy lại không mất phần đã làm (ca đã có
+trong CSV bị bỏ qua, trừ khi có --force). Mỗi cặp (dataset, minsup) chỉ có đúng
+một dòng: chạy lại với --force thì dòng cũ được THAY, không ghi thêm.
 
 Thời gian của SPMF lấy từ dòng "Total time" do chính SPMF in ra, không phải thời
 gian của cả tiến trình java, vì tính cả thời gian khởi động JVM thì so sánh không
@@ -139,22 +143,39 @@ def match_percent(mine, name, minsup):
     return len(matched) / len(ref) * 100
 
 
-def done_cases():
+def read_rows(csv_path):
+    """Đọc các dòng số liệu đã có trong CSV (bỏ dòng tiêu đề)."""
+    if not os.path.exists(csv_path):
+        return []
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)                     # bỏ dòng tiêu đề
+        return [row for row in reader if row]
+
+
+def done_cases(csv_path):
     """Các ca đã có trong CSV, để chạy lại không làm lại từ đầu."""
-    if not os.path.exists(CSV_PATH):
-        return set()
-    with open(CSV_PATH, newline="", encoding="utf-8") as f:
-        return {(row["dataset"], row["minsup"]) for row in csv.DictReader(f)}
+    return {(row[0], row[1]) for row in read_rows(csv_path)}
 
 
-def append_row(row):
-    os.makedirs(EXP_DIR, exist_ok=True)
-    new_file = not os.path.exists(CSV_PATH)
-    with open(CSV_PATH, "a", newline="", encoding="utf-8") as f:
+def save_row(row, csv_path):
+    """Ghi kết quả một ca vào CSV, THAY dòng cũ của cùng ca nếu đã có.
+
+    Trước đây hàm này chỉ ghi nối vào cuối file, nên chạy lại với --force làm
+    mỗi ca xuất hiện hai lần. Giờ mỗi cặp (dataset, minsup) chỉ có đúng một dòng.
+    Vẫn ghi lại cả file sau từng ca, nên dừng giữa chừng không mất phần đã chạy.
+    """
+    key = (str(row[0]), str(row[1]))
+    rows = [r for r in read_rows(csv_path) if (r[0], r[1]) != key]
+    rows.append([str(v) for v in row])
+
+    folder = os.path.dirname(csv_path)
+    if folder:
+        os.makedirs(folder, exist_ok=True)
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        if new_file:
-            writer.writerow(COLUMNS)
-        writer.writerow(row)
+        writer.writerow(COLUMNS)
+        writer.writerows(rows)
 
 
 def fmt(value):
@@ -196,9 +217,9 @@ def run_case(name, path, minsup, args):
           f"{f' | spmf {t_spmf:.3f}s' if t_spmf else ''}{speedup}"
           f" | khớp SPMF {'chưa có ref' if pct is None else f'{pct:.2f}%'}", flush=True)
 
-    append_row([name, minsup, min_count, len(result),
-                fmt(t_basic), fmt(t_opt), fmt(t_spmf),
-                "" if pct is None else f"{pct:.2f}"])
+    save_row([name, minsup, min_count, len(result),
+              fmt(t_basic), fmt(t_opt), fmt(t_spmf),
+              "" if pct is None else f"{pct:.2f}"], args.csv)
 
 
 def main():
@@ -215,7 +236,10 @@ def main():
     parser.add_argument("--skip-spmf", action="store_true",
                         help="không chạy SPMF (vẫn so khớp nếu đã có ref)")
     parser.add_argument("--force", action="store_true",
-                        help="chạy lại cả những ca đã có trong CSV")
+                        help="chạy lại cả những ca đã có trong CSV (dòng cũ được thay)")
+    parser.add_argument("--csv", default=CSV_PATH,
+                        help=f"file CSV kết quả (mặc định {CSV_PATH}); "
+                             "notebook dùng file khác để không ghi đè số liệu chính thức")
     args = parser.parse_args()
 
     todo = cases(args.group)
@@ -225,16 +249,16 @@ def main():
             raise SystemExit(f"Không có ca nào cho CSDL '{args.dataset}'.")
 
     if not args.force:
-        already = done_cases()
+        already = done_cases(args.csv)
         before = len(todo)
         todo = [c for c in todo if (c[0], str(c[2])) not in already]
         if before != len(todo):
-            print(f"Bỏ qua {before - len(todo)} ca đã có trong {CSV_PATH}.")
+            print(f"Bỏ qua {before - len(todo)} ca đã có trong {args.csv}.")
 
     for case in todo:
         run_case(*case, args=args)
 
-    print(f"Xong {len(todo)} ca, số liệu trong {CSV_PATH}.")
+    print(f"Xong {len(todo)} ca, số liệu trong {args.csv}.")
     if spmf_off:
         print(f"Hai cột t_spmf_s và match_pct để trống vì {spmf_off}.")
         print("Khắc phục rồi thì chạy lại với --force để điền hai cột đó.")
