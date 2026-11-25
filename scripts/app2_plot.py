@@ -33,60 +33,64 @@ def position_profile(seqs):
 
 
 def plot_profile(rows):
-    fig, axes = plt.subplots(3, 1, figsize=(12, 7), sharex=True)
-    for ax, label in zip(axes, LABELS):
-        seqs = [seq for lab, seq in rows if lab == label]
-        prof = position_profile(seqs)
+    # dùng kiểu vẽ mặc định, không bị ảnh hưởng bởi plt.rcParams đã đổi ở phần trước của notebook
+    with plt.style.context("default"):
+        fig, axes = plt.subplots(3, 1, figsize=(12, 7), sharex=True)
+        for ax, label in zip(axes, LABELS):
+            seqs = [seq for lab, seq in rows if lab == label]
+            prof = position_profile(seqs)
 
-        im = ax.imshow(prof, aspect="auto", cmap="Blues", vmin=0, vmax=1)
-        ax.set_yticks(range(4))
-        ax.set_yticklabels(list(BASES))
-        ax.set_title(f"{label} ({len(seqs)} mẫu)")
-        ax.axvline(29.5, color="red", linewidth=1)   # ranh giới giữa -1 và +1
+            im = ax.imshow(prof, aspect="auto", cmap="Blues", vmin=0, vmax=1)
+            ax.set_yticks(range(4))
+            ax.set_yticklabels(list(BASES))
+            ax.set_title(f"{label} ({len(seqs)} mẫu)")
+            ax.axvline(29.5, color="red", linewidth=1)   # ranh giới giữa -1 và +1
 
-    ticks = [0, 5, 10, 15, 20, 25, 30, 34, 39, 44, 49, 54, 59]
-    axes[-1].set_xticks(ticks)
-    axes[-1].set_xticklabels([position_name(i) for i in ticks])
-    axes[-1].set_xlabel("Vị trí so với ranh giới (vạch đỏ = ranh giới, giữa -1 và +1)")
-    fig.suptitle("Tỉ lệ từng nucleotide tại mỗi vị trí, theo nhóm (càng đậm càng phổ biến)")
-    fig.colorbar(im, ax=axes, label="Tỉ lệ mẫu")
-    fig.savefig(f"{FIG_DIR}/app2_profile.png", dpi=200, bbox_inches="tight")
-    plt.close(fig)
-    print(f"Đã lưu {FIG_DIR}/app2_profile.png")
+        ticks = [0, 5, 10, 15, 20, 25, 30, 34, 39, 44, 49, 54, 59]
+        axes[-1].set_xticks(ticks)
+        axes[-1].set_xticklabels([position_name(i) for i in ticks])
+        axes[-1].set_xlabel("Vị trí so với ranh giới (vạch đỏ = ranh giới, giữa -1 và +1)")
+        fig.suptitle("Tỉ lệ từng nucleotide tại mỗi vị trí, theo nhóm (càng đậm càng phổ biến)")
+        fig.colorbar(im, ax=axes, label="Tỉ lệ mẫu")
+        fig.savefig(f"{FIG_DIR}/app2_profile.png", dpi=200, bbox_inches="tight")
+        plt.close(fig)
+        print(f"Đã lưu {FIG_DIR}/app2_profile.png")
 
 
 def plot_emerging(groups, code, top_k=8, min_n=5):
     """Top emerging pattern theo growth. Thanh xám: #N < min_n, growth không ổn định."""
-    name_of = invert_code(code)
-    fig, axes = plt.subplots(1, 2, figsize=(14, 4.8))
-    for ax, label in zip(axes, ["EI", "IE"]):
-        rows = emerging(groups[label], groups["N"], 0.5)
-        rows.sort(key=lambda r: (r[3], r[1]), reverse=True)
-        rows = rows[:top_k][::-1]                    # đảo ngược để thanh lớn nhất nằm trên cùng
+    # dùng kiểu vẽ mặc định, không bị ảnh hưởng bởi plt.rcParams đã đổi ở phần trước của notebook
+    with plt.style.context("default"):
+        name_of = invert_code(code)
+        fig, axes = plt.subplots(1, 2, figsize=(14, 4.8))
+        for ax, label in zip(axes, ["EI", "IE"]):
+            rows = emerging(groups[label], groups["N"], 0.5)
+            rows.sort(key=lambda r: (r[3], r[1]), reverse=True)
+            rows = rows[:top_k][::-1]                    # đảo ngược để thanh lớn nhất nằm trên cùng
 
-        names = [", ".join(name_of[i] for i in r[0]) for r in rows]
-        growth = [r[3] for r in rows]
-        mau = ["tab:blue" if r[4] >= min_n else "lightgray" for r in rows]
-        ax.barh(names, growth, color=mau)
-        for y, r in enumerate(rows):
-            ax.text(r[3] * 1.08, y, f"{r[3]:.1f}  (#N={r[4]})", va="center", fontsize=8)
+            names = [", ".join(name_of[i] for i in r[0]) for r in rows]
+            growth = [r[3] for r in rows]
+            mau = ["tab:blue" if r[4] >= min_n else "lightgray" for r in rows]
+            ax.barh(names, growth, color=mau)
+            for y, r in enumerate(rows):
+                ax.text(r[3] * 1.08, y, f"{r[3]:.1f}  (#N={r[4]})", va="center", fontsize=8)
 
-        ax.set_xscale("log")
-        ax.set_xlim(right=max(growth) * 4)            # chừa chỗ cho nhãn, không bị cắt
-        ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
-        ax.xaxis.set_minor_formatter(FuncFormatter(lambda v, _: ""))
-        ax.set_xlabel(f"Growth rate = sup({label}) / sup(N), thang log")
-        ax.set_title(f"Top {top_k} emerging pattern của {label} so với N (minsup 0,5)")
+            ax.set_xscale("log")
+            ax.set_xlim(right=max(growth) * 4)            # chừa chỗ cho nhãn, không bị cắt
+            ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+            ax.xaxis.set_minor_formatter(FuncFormatter(lambda v, _: ""))
+            ax.set_xlabel(f"Growth rate = sup({label}) / sup(N), thang log")
+            ax.set_title(f"Top {top_k} emerging pattern của {label} so với N (minsup 0,5)")
 
-    # chú thích màu dùng chung
-    from matplotlib.patches import Patch
-    fig.legend(handles=[Patch(color="tab:blue", label=f"#N ≥ {min_n}: đáng tin"),
-                        Patch(color="lightgray", label=f"#N < {min_n}: growth không ổn định")],
-               loc="lower center", ncol=2, frameon=False)
-    fig.tight_layout(rect=(0, 0.06, 1, 1))
-    fig.savefig(f"{FIG_DIR}/app2_emerging.png", dpi=200)
-    plt.close(fig)
-    print(f"Đã lưu {FIG_DIR}/app2_emerging.png")
+        # chú thích màu dùng chung
+        from matplotlib.patches import Patch
+        fig.legend(handles=[Patch(color="tab:blue", label=f"#N ≥ {min_n}: đáng tin"),
+                            Patch(color="lightgray", label=f"#N < {min_n}: growth không ổn định")],
+                   loc="lower center", ncol=2, frameon=False)
+        fig.tight_layout(rect=(0, 0.06, 1, 1))
+        fig.savefig(f"{FIG_DIR}/app2_emerging.png", dpi=200)
+        plt.close(fig)
+        print(f"Đã lưu {FIG_DIR}/app2_emerging.png")
 
 
 def main():
