@@ -38,29 +38,30 @@ def save(fig, name):
     plt.close(fig)
     print(f"Đã lưu {path}")
 def plot_memory():
-    """Bộ nhớ đỉnh của bản cơ bản và bản tối ưu tại minsup giữa của mỗi CSDL."""
+    """Bộ nhớ đỉnh của bản cơ bản và bản tối ưu tại minsup giữa, mỗi CSDL một ô.
+
+    Mỗi ô có trục tung riêng, BẮT ĐẦU TỪ 0, nên chiều cao hai cột tỉ lệ đúng với số MB
+    (trục log trước đây phóng đại chênh lệch, ví dụ Chess 4,27 -> 3,08 MB trông như giảm 4 lần).
+    """
     df = pd.read_csv(f"{EXP_DIR}/memory.csv")
-    x = np.arange(len(df))          # vị trí mỗi nhóm cột: 0, 1, 2, 3
-    w = 0.38                        # bề rộng một cột
+    fig, axes = plt.subplots(1, len(df), figsize=(10, 3.6))
 
-    fig, ax = plt.subplots(figsize=(7, 4))
-    ax.bar(x - w / 2, df["peak_basic_mb"], w, label="cơ bản")
-    ax.bar(x + w / 2, df["peak_opt_mb"], w, label="tối ưu")
+    for ax, row in zip(axes, df.itertuples()):
+        gia_tri = [row.peak_basic_mb, row.peak_opt_mb]
+        ax.bar(["cơ bản", "tối ưu"], gia_tri, color=["tab:blue", "tab:orange"], width=0.6)
+        for i, v in enumerate(gia_tri):
+            ax.text(i, v, f"{v:g}", ha="center", va="bottom", fontsize=8)
 
-    ax.set_xticks(x)
-    ax.set_xticklabels([f"{d}\n(minsup {m})" for d, m in zip(df["dataset"], df["minsup"])])
-    ax.set_yscale("log")           # trục log: T10I4D100K lớn hơn Chess khoảng 50 lần
-    ax.set_ylabel("Bộ nhớ đỉnh (MB, thang log)")
-    ax.set_title("Bộ nhớ đỉnh: bản cơ bản và bản tối ưu (tại minsup giữa)")
-    ax.set_ylim(top=df["peak_basic_mb"].max() * 2.5)    # chừa chỗ cho nhãn % ở cột cao nhất
-    ax.legend()
+        doi = (row.peak_opt_mb - row.peak_basic_mb) / row.peak_basic_mb * 100
+        loai = "dày" if row.dataset in DENSE else "thưa"
+        nhan = "≈ 0%" if abs(doi) < 0.05 else f"{doi:+.1f}%"
+        ax.set_title(f"{row.dataset} ({loai})\nminsup {row.minsup}: {nhan}", fontsize=9)
+        ax.set_ylim(0, max(gia_tri) * 1.18)          # trục bắt đầu từ 0, chừa chỗ ghi số
+        ax.tick_params(labelsize=8)
 
-    # ghi % thay đổi lên trên mỗi cặp cột
-    for i, row in df.iterrows():
-        doi = (row["peak_opt_mb"] - row["peak_basic_mb"]) / row["peak_basic_mb"] * 100
-        ax.text(i, row["peak_basic_mb"] * 1.15, f"{doi:+.1f}%", ha="center")
+    axes[0].set_ylabel("Bộ nhớ đỉnh (MB)")
+    fig.suptitle("Bộ nhớ đỉnh: bản cơ bản và bản tối ưu (tại minsup giữa; mỗi ô một thang đo riêng)", fontsize=10)
     save(fig, "memory")
-
 
 def plot_txlen():
     """Thời gian và số itemset theo độ dài giao dịch trung bình (CSDL tổng hợp)."""

@@ -46,9 +46,12 @@ def plot_profile(rows):
             ax.set_title(f"{label} ({len(seqs)} mẫu)")
             ax.axvline(29.5, color="red", linewidth=1)   # ranh giới giữa -1 và +1
 
-        ticks = [0, 5, 10, 15, 20, 25, 30, 34, 39, 44, 49, 54, 59]
+        # vạch đối xứng hai bên ranh giới: -30 … -5, -1 | +1, +5 … +30
+        ticks = [0, 5, 10, 15, 20, 25, 29, 30, 34, 39, 44, 49, 54, 59]
         axes[-1].set_xticks(ticks)
-        axes[-1].set_xticklabels([position_name(i) for i in ticks])
+        nhan = axes[-1].set_xticklabels([position_name(i) for i in ticks])
+        nhan[ticks.index(29)].set_ha("right")    # -1 dịch sang trái
+        nhan[ticks.index(30)].set_ha("left")     # +1 dịch sang phải, để hai nhãn không dính nhau
         axes[-1].set_xlabel("Vị trí so với ranh giới (vạch đỏ = ranh giới, giữa -1 và +1)")
         fig.suptitle("Tỉ lệ từng nucleotide tại mỗi vị trí, theo nhóm (càng đậm càng phổ biến)")
         fig.colorbar(im, ax=axes, label="Tỉ lệ mẫu")

@@ -190,18 +190,18 @@ collected 96 items
 |---|---|---|
 | `test_correctness.py` | 23 | 7 ca toy: số tập phổ biến tính tay, basic == optimized, so với SPMF; ví dụ bài báo; item lặp và dòng trống |
 | `test_benchmark.py` | 28 | 4 CSDL benchmark × 7 minsup: basic == optimized, khớp SPMF 100% |
-| `test_encode.py` | 10 | mã hóa item dạng chữ sang số và giải mã ngược |
+| `test_encode.py` | 12 | mã hóa item dạng chữ sang số và giải mã ngược |
 | `test_basket.py` | 9 | loader giỏ hàng, null model, mốc Groceries (9.835 giỏ, 169 món, support whole milk = 2513) |
 | `test_rules.py` | 26 | luật kết hợp: giá trị tính tay, bất biến toán học, trường hợp biên, mốc Groceries (15 và 410 luật) |
-| **Tổng** | **96** | |
+| **Tổng** | **98** | |
 
-Chạy trên máy mới clone về, chưa có file ref, thì 35 test so với SPMF bị `SKIPPED` còn 61 test kia vẫn phải xanh hết — và chỉ mất khoảng 1 giây vì phần lâu nhất (`test_benchmark.py`) nằm trong nhóm bị skip:
+Chạy trên máy mới clone về: ref của 7 ca toy đã có sẵn trong repo, chỉ 28 test benchmark so với SPMF bị `SKIPPED` còn 70 test kia vẫn phải xanh hết — và chỉ mất khoảng 1 giây vì phần lâu nhất (`test_benchmark.py`) nằm trong nhóm bị skip:
 
 ```
 $ python -m pytest tests -q
-.........ssssssssssssssssssssssssssss..............sssssss.............. [ 75%]
-........................                                                 [100%]
-61 passed, 35 skipped in 1.14s
+.........ssssssssssssssssssssssssssss................................... [ 73%]
+..........................                                               [100%]
+70 passed, 28 skipped in 0.90s
 ```
 
 ## Thực nghiệm chương 2
@@ -499,9 +499,13 @@ FP-Growth gồm 3 giai đoạn, ứng với các hàm trong mã nguồn:
 | 2. Dựng FP-tree | `order_transaction`, `build_tree`, `insert_transaction` | Lọc và sắp item theo support giảm dần (bằng nhau thì theo tên để thứ tự cố định), chèn vào cây prefix. Các giao dịch chung tiền tố dùng chung đường đi. |
 | 3. Khai thác | `get_prefix_paths`, `build_conditional_tree`, `mine_tree` | Với mỗi item (từ ít phổ biến nhất), lấy conditional pattern base, dựng conditional FP-tree, đệ quy. Không sinh candidate. |
 
-### Tối ưu single path (Lemma 3.2)
+### Tối ưu 1: single path (Lemma 3.2)
 
-Khi một (conditional) FP-tree chỉ có **một nhánh**, mọi tổ hợp khác rỗng của các item trên nhánh đều là tập phổ biến, với support bằng support nhỏ nhất trong tổ hợp. Cài đặt liệt kê thẳng các tổ hợp (`get_single_path`, `add_single_path`) thay vì dựng thêm conditional tree cho từng item.
+Khi một (conditional) FP-tree chỉ có **một nhánh**, mọi tổ hợp khác rỗng của các item trên nhánh đều là tập phổ biến, với support bằng support nhỏ nhất trong tổ hợp. Cài đặt liệt kê thẳng các tổ hợp (`get_single_path`, `add_single_path`) thay vì dựng thêm conditional tree cho từng item. Vì count giảm dần dọc nhánh, support của một tổ hợp lấy thẳng bằng count của phần tử cuối (`combo[-1][1]`), không cần `min()`.
+
+### Tối ưu 2: `__slots__` cho nút cây
+
+`FPNode` khai báo `__slots__ = ("item", "count", "parent", "children")`, nên mỗi nút không còn từ điển `__dict__` riêng. Trên dữ liệu thưa, nơi bộ nhớ đỉnh gần như là FP-tree gốc, bộ nhớ đỉnh giảm 12–14% (Retail 39,9 → 34,5 MB; T10I4D100K 204,7 → 179,0 MB). Cả hai bản (cơ bản và tối ưu) đều dùng chung `FPNode`.
 
 ## Kết quả thực nghiệm
 
@@ -513,25 +517,25 @@ Máy: Windows, Python 3.13. Thời gian là **trung vị của 3 lần chạy**,
 
 | CSDL | minsup | Số tập phổ biến | Bản cơ bản (s) | Bản tối ưu (s) | SPMF (s) |
 |---|---|---|---|---|---|
-| Chess | 0,6 | 254.944 | 1,890 | 1,554 | 0,506 |
-| Mushroom | 0,05 | 4.137.547 | 28,246 | 12,336 | 1,385 |
-| Retail | 0,001 | 7.589 | 3,855 | 3,671 | 0,955 |
-| T10I4D100K | 0,001 | 27.532 | 6,814 | 6,645 | 1,255 |
+| Chess | 0,6 | 254.944 | 1,663 | 1,408 | 0,301 |
+| Mushroom | 0,05 | 4.137.547 | 21,294 | 5,697 | 1,174 |
+| Retail | 0,001 | 7.589 | 3,092 | 2,856 | 0,749 |
+| T10I4D100K | 0,001 | 27.532 | 5,934 | 5,736 | 1,118 |
 
 **Bộ nhớ đỉnh tại minsup giữa:**
 
 | CSDL | Bản cơ bản (MB) | Bản tối ưu (MB) | Thay đổi |
 |---|---|---|---|
-| Chess | 4,20 | 3,15 | −25,0% |
-| Mushroom | 10,66 | 8,37 | −21,5% |
-| Retail | 39,91 | 39,82 | −0,2% |
-| T10I4D100K | 204,63 | 204,66 | ≈ 0% |
+| Chess | 4,03 | 2,97 | −26,3% |
+| Mushroom | 10,37 | 8,09 | −22,0% |
+| Retail | 34,46 | 34,39 | −0,2% |
+| T10I4D100K | 179,02 | 179,04 | ≈ 0% |
 
 Nhận xét ngắn:
 
-- Tối ưu single path có hiệu quả trên **dữ liệu dày**: nhanh hơn bản cơ bản tới 3,5 lần (Mushroom 0,1) và giảm 21–25% bộ nhớ. Trên **dữ liệu thưa** gần như không đổi, vì đỉnh bộ nhớ và thời gian chủ yếu nằm ở FP-tree gốc.
-- Cài đặt Python chậm hơn SPMF (Java) khoảng **3–5 lần** ở minsup thấp, tới gần **9 lần** với Mushroom 0,05 (4,1 triệu tập phổ biến).
-- Độ dài giao dịch tăng 6 lần (5 → 30) làm thời gian tăng khoảng 180 lần: thời gian tăng **phi tuyến** theo độ dài giao dịch.
+- Tối ưu single path có hiệu quả trên **dữ liệu dày**: nhanh hơn bản cơ bản tới 3,7 lần (Mushroom 0,05) và giảm 22–26% bộ nhớ. Trên **dữ liệu thưa** gần như không đổi, vì đỉnh bộ nhớ và thời gian chủ yếu nằm ở FP-tree gốc; phần này được tối ưu `__slots__` giảm 12–14% bộ nhớ.
+- Cài đặt Python chậm hơn SPMF (Java) khoảng **3,8–5,1 lần** ở minsup thấp nhất.
+- Độ dài giao dịch tăng 6 lần (5 → 30) làm thời gian tăng khoảng 190 lần: thời gian tăng **phi tuyến** theo độ dài giao dịch.
 - Thời gian tăng gần **tuyến tính** theo số giao dịch (Retail, 10% → 100%).
 - Thời gian đo có dao động giữa các lần chạy (tới khoảng ±40% ở một số ca), nên chỉ nên so sánh xu hướng và chênh lệch lớn.
 

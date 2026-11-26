@@ -4,12 +4,15 @@ from src.utils import order_transaction
 
 
 class FPNode:
+    # __slots__: mỗi nút chỉ có đúng 4 thuộc tính này, Python không cần tạo dict
+    # __dict__ riêng cho từng nút -> mỗi nút nhẹ hơn, cây lớn tiết kiệm nhiều bộ nhớ.
+    __slots__ = ("item", "count", "parent", "children")
+
     def __init__(self, item, parent, count = 1):
         self.item = item
         self.count = count
         self.parent =parent
         self.children = {}
-
 
 def insert_transaction(root, transaction, header, count = 1):
     node =  root

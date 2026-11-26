@@ -19,11 +19,16 @@ def get_single_path(root):
 
 
 def add_single_path(path, suffix, result):
-    """Lemma 3.2: mọi tổ hợp của một nhánh đều phổ biến, support = min count."""
+    """Lemma 3.2: mọi tổ hợp của một nhánh đều phổ biến, support = min count.
+
+    Count giảm dần dọc theo nhánh (cha luôn >= con), và combinations giữ nguyên
+    thứ tự của path, nên count nhỏ nhất của một tổ hợp chính là count của phần
+    tử cuối cùng: combo[-1][1]. Không cần gọi min() trên cả tổ hợp.
+    """
     for r in range(1, len(path) + 1):
         for combo in combinations(path, r):
             items = [x[0] for x in combo]
-            support = min(x[1] for x in combo)
+            support = combo[-1][1]          # = min(count) vì count giảm dần dọc nhánh
             result[tuple(sorted(suffix + items))] = support
 
 
