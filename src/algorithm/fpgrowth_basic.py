@@ -1,12 +1,12 @@
 import argparse
-import math
 
+from src.config import to_min_count
 from src.utils import read_transactions, find_frequent_items,write_result
 from src.structures import build_tree, get_prefix_paths, build_conditional_tree
 
 
 def mine_tree (header, freq, suffix, min_count, result):
-    # duyệt item tuef ít phổ biến nhất lên (ngược flist)
+    # duyệt item từ ít phổ biến nhất lên; cùng support thì theo mã item tăng dần
     items = sorted (freq, key = lambda i: (freq[i], i))
     for item in items:
         new_suffix = suffix + [item]
@@ -35,8 +35,11 @@ if __name__ == "__main__":
     parser.add_argument("--output", default="output.txt")
     args = parser.parse_args()
 
+    if not (0 < args.minsup <= 1):
+        parser.error("--minsup phải nằm trong khoảng (0, 1]")
+        
     data = read_transactions(args.input)
-    min_count = math.ceil(args.minsup * len(data))
+    min_count = to_min_count(args.minsup, len(data))
     result = fpgrowth (data, min_count)
     write_result(result, args.output)
     print(f"Tìm được {len(result)} tập phổ biến")
