@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Phần thuật toán (src/algorithm, src/structures, src/utils, src/rules) chỉ dùng
 # THƯ VIỆN CHUẨN của Python. Các gói dưới đây chỉ phục vụ kiểm thử, notebook và
 # vẽ biểu đồ, đúng ràng buộc của đề (ngoài thư viện chuẩn chỉ được numpy, pandas,
