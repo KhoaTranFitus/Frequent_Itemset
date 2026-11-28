@@ -2,6 +2,7 @@ import argparse
 import math
 from itertools import combinations
 
+from src.config import use_utf8_stdout
 from src.utils import read_transactions, find_frequent_items, write_result
 from src.structures import build_tree, get_prefix_paths, build_conditional_tree
 
@@ -61,6 +62,7 @@ def fpgrowth(transactions, min_count):
 
 
 def main():
+    use_utf8_stdout()       # in tiếng Việt không lỗi khi output bị pipe trên Windows
     parser = argparse.ArgumentParser(description="FP-Growth khai thác tập phổ biến (định dạng SPMF)")
     parser.add_argument("input", help="đường dẫn file input (SPMF .txt)")
     parser.add_argument("--minsup", type=float, required=True,
