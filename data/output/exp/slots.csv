@@ -1,0 +1,5 @@
+dataset,minsup,peak_noslots_mb,peak_slots_mb
+chess,0.75,4.16,3.97
+mushroom,0.2,11.50,11.20
+retail,0.004,39.84,34.41
+T10I4D100K,0.004,204.65,179.03
