@@ -13,6 +13,7 @@ data/output/exp/runtime_colab.csv
 
 # kết quả của người chạy và ref lớn
 data/output/*
+!data/output/exp/
 !data/output/ref/
 data/output/ref/*
 !data/output/ref/test*.txt
