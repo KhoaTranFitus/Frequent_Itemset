@@ -1,7 +1,10 @@
 import json
 
 def read_transactions(path):
-    # TODO: đọc từng dòng, tách bằng dấu cách, trả về list các list item
+    """Đọc file SPMF: mỗi dòng một giao dịch, item là số nguyên cách nhau bởi dấu cách.
+
+    Trả về list các list item; dòng trống bị bỏ qua.
+    """
 
     transaction = []
     with open (path) as f:
@@ -39,6 +42,7 @@ def order_transaction(transaction, rank):
     return sorted (kept, key= lambda item: rank[item])
 
 def print_tree(node, depth=0):
+    """In FP-tree dạng thụt lề, mỗi nút một dòng 'item:count' (dùng khi gỡ lỗi)."""
     for child in node.children.values():
         print("  " * depth + f"{child.item}:{child.count}")
         print_tree(child, depth + 1)
@@ -46,7 +50,7 @@ def print_tree(node, depth=0):
 def write_result(result, path):
     with open(path, "w") as f:
         for itemset, sup in result.items():
-            items_text = " ".join(str(i) for i in itemset)      # TODO: ghép các item (đang là int) thành chuỗi
+            items_text = " ".join(str(i) for i in itemset)
             f.write(f"{items_text} #SUP: {sup}\n")
 
 
@@ -58,8 +62,8 @@ def read_result(path):
             if not line or line.startswith("@"):
                 continue
             items_part, sup_part = line.split("#SUP:")
-            itemset = tuple(sorted (int(x) for x in items_part.split()))  # TODO: tách items_part, đổi int, sắp xếp, thành tuple
-            result[itemset] = int(sup_part.strip()) # TODO: support là số nguyên
+            itemset = tuple(sorted (int(x) for x in items_part.split()))
+            result[itemset] = int(sup_part.strip())
     return result
 
 def compare (mine, ref):
@@ -123,15 +127,6 @@ def decode(result, code):
     return {tuple(name_of[num] for num in itemset): sup
             for itemset, sup in result.items()}
 
-
-if __name__ == "__main__":
-    data = read_transactions("toy.txt")
-    freq = find_frequent_items(data, 3)
-    flist = sorted(freq, key=lambda item: (-freq[item], item))
-    rank = {item: i for i, item in enumerate(flist)}
-    print(flist)
-    for t in data:
-        print(order_transaction(t, rank))
 
 def save_code(code, path):
     """Ghi bảng mã ra file JSON dạng danh sách cặp [item gốc, số].
