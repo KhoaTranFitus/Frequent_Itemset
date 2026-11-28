@@ -14,14 +14,14 @@ Cài đặt lại thuật toán **FP-Growth** (Han và cộng sự, 2004) bằng
 - **Demo notebook trên Google Colab:** [mở notebook](https://colab.research.google.com/github/KhoaTranFitus/Frequent_Itemset/blob/main/notebooks/demo.ipynb)
 - Báo cáo: [`docs/Report.pdf`](docs/Report.pdf)
 - Bài báo gốc: [`docs/references/fpgrowth_04.pdf`](docs/references/fpgrowth_04.pdf)
-- Dữ liệu: toàn bộ chỉ khoảng 9 MB (file lớn nhất là Retail, 4 MB), dưới giới hạn của GitHub nên **để thẳng trong repo**, không cần host trên Hugging Face hay Kaggle. Clone về là chạy được ngay:
+- Dữ liệu: toàn bộ chỉ khoảng 10 MB (file lớn nhất là Retail, 4 MB), dưới giới hạn của GitHub nên **để thẳng trong repo**, không cần host trên Hugging Face hay Kaggle. Clone về là chạy được ngay:
 
 | Thư mục | Nội dung | Nguồn |
 |---|---|---|
 | `data/toy/` | 4 CSDL nhỏ để kiểm thử nhanh | nhóm tự xây dựng |
 | `data/benchmark/` | Chess, Mushroom, Retail, T10I4D100K | [SPMF Datasets](https://www.philippe-fournier-viger.com/spmf/datasets.php) |
 | `data/app1/` | Groceries (9.835 giỏ hàng) | gói arules của R, xem [`data/app1/README.md`](data/app1/README.md) |
-| `data/app2/` | Splice-junction Gene Sequences (3.190 chuỗi DNA) | UCI Machine Learning Repository [`data/app2/README.md`](data/app2/README.md) |
+| `data/app2/` | Splice-junction Gene Sequences (3.190 chuỗi DNA) | UCI Machine Learning Repository, xem [`data/app2/README.md`](data/app2/README.md) |
 
 ## Cài đặt môi trường
 
