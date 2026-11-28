@@ -169,6 +169,7 @@ python -m scripts.plot_ch2           # vẽ biểu đồ
 # Ứng dụng 1: phân tích giỏ hàng (Groceries)
 python -m scripts.app1_basket        # top 10 luật theo lift
 python -m scripts.app1_verify        # đối chiếu arules + null model
+python -m scripts.app1_curves        # quét ngưỡng minsup × minconf + null model, ghi CSV
 python -m scripts.app1_plot
 
 # Ứng dụng 2: chuỗi DNA
