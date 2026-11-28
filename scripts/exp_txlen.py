@@ -6,7 +6,7 @@ import numpy as np
 
 from src.algorithm.fpgrowth import fpgrowth
 from src.config import EXP_DIR, SEED, to_min_count, use_utf8_stdout
-from scripts.exp_runtime import median_time       # dùng lại hàm của Thông
+from scripts.exp_runtime import median_time       # cùng cách đo trung vị với exp_runtime
 
 CSV_PATH = f"{EXP_DIR}/txlen.csv"
 COLUMNS = ["avg_len", "transactions", "minsup", "itemsets", "t_opt_s"]
@@ -39,17 +39,13 @@ def main():
     use_utf8_stdout()
     rows = []
     for L in AVG_LENS:
-        # 1. sinh data
-        # 2. tính độ dài trung bình THỰC TẾ của data vừa sinh
-        # 3. tính min_count, đo thời gian bằng median_time
-        # 4. in ra màn hình + thêm dòng vào rows
         data = generate(N_TRANSACTIONS, N_ITEMS, L)
-        avg_len = sum(len(t) for t in data) / len (data)
+        avg_len = sum(len(t) for t in data) / len (data)    # độ dài TB thực tế, ghi vào CSV
 
         min_count = to_min_count(MINSUP, len(data))
         result,t = median_time(fpgrowth,data, min_count, RUNS)
 
-        print (f"L={L}: avg thuc {avg_len:.2f} | {len(result)} tap | {t:.3f}s", flush=True)
+        print(f"L={L}: độ dài TB thực tế {avg_len:.2f} | {len(result)} tập | {t:.3f}s", flush=True)
         rows.append([f"{avg_len:.2f}", len(data), MINSUP, len(result), f"{t:.4f}"])
 
     os.makedirs(EXP_DIR, exist_ok=True)

@@ -7,15 +7,18 @@ Hai phần, chạy một lệnh ra cả hai:
    tập phổ biến và số luật bùng nổ thế nào, và minconf siết nhanh hơn hay chậm
    hơn minsup.
 
-2. **Null model.** Trộn item giữa các giỏ nhưng giữ nguyên tần suất từng item và
-   độ dài từng giỏ (shuffle_keep_marginals, seed cố định), rồi chạy lại đúng
-   fpgrowth đó ở cùng ngưỡng, ghi nullmodel.csv.
+2. **Null model.** Trộn item giữa các giỏ bằng swap randomization
+   (swap_randomize trong scripts/app1_verify.py, seed cố định), giữ CHÍNH XÁC
+   support từng item và độ dài từng giỏ, rồi chạy lại đúng fpgrowth đó ở cùng
+   ngưỡng, ghi nullmodel.csv. Cùng hàm, cùng seed với app1_verify nên số liệu
+   trùng Bảng XII của báo cáo.
 
    Câu hỏi mà null model trả lời: các luật tìm được có phải chỉ là hệ quả của
    việc vài item bán rất chạy hay không? Nếu đúng vậy thì dữ liệu đã trộn — vẫn
-   giữ nguyên độ bán chạy của từng item — phải sinh ra lượng luật và mức lift
-   tương đương. Thực tế không như vậy, và chênh lệch đó chính là bằng chứng các
-   mẫu tìm được phản ánh hành vi mua cùng nhau thật.
+   giữ nguyên support của từng item — phải sinh ra lượng luật và mức lift
+   tương đương. Chỉ thống kê nào của dữ liệu thật vượt hẳn dữ liệu trộn mới là
+   bằng chứng các mẫu phản ánh hành vi mua cùng nhau thật (xem
+   compare_real_vs_shuffled).
 
 Chạy từ thư mục gốc repo:
     python -m scripts.app1_curves                          # Groceries, đủ cả hai phần
@@ -46,7 +49,8 @@ import statistics
 import time
 
 from src.algorithm.fpgrowth import fpgrowth
-from src.apps.basket import load_dataset, shuffle_keep_marginals
+from scripts.app1_verify import swap_randomize
+from src.apps.basket import load_dataset
 from src.config import (APP1_DATASETS, APP1_DIR, APP1_MINCONF, APP1_MINCONFS,
                         APP1_MINSUP, APP1_MINSUP_RETAIL, APP1_MINSUPS,
                         APP1_MINSUPS_RETAIL, APP1_SHUFFLES, SEED,
@@ -128,7 +132,7 @@ def scan_thresholds(dataset, transactions, minsups, minconfs):
 
 
 def run_null_model(dataset, transactions, minsup, minconf, shuffles):
-    """So dữ liệu thật với các bản đã trộn giữ nguyên tần suất item."""
+    """So dữ liệu thật với các bản swap (giữ nguyên support item và độ dài giỏ)."""
     n = len(transactions)
     min_count = to_min_count(minsup, n)
     rows = []
@@ -147,7 +151,7 @@ def run_null_model(dataset, transactions, minsup, minconf, shuffles):
 
     for i in range(1, shuffles + 1):
         seed = SEED + i - 1
-        shuffled = shuffle_keep_marginals(transactions, seed)
+        shuffled, _ = swap_randomize(transactions, seed)
         itemsets = fpgrowth(shuffled, min_count)
         rules = generate_rules(itemsets, n, minconf)
         count, max_lift, _, _, strong = summarize(rules)
@@ -164,14 +168,16 @@ def run_null_model(dataset, transactions, minsup, minconf, shuffles):
 def compare_real_vs_shuffled(rows):
     """In bảng so dữ liệu thật với trung vị các lần trộn.
 
-    Cố ý KHÔNG viết sẵn một câu kết luận. Trên CSDL dày như Groceries, cả ba
-    thống kê của dữ liệu trộn đều sụp hẳn so với dữ liệu thật, nên kết luận
-    "các mẫu tìm được là thật" là hiển nhiên. Nhưng trên CSDL rất thưa như
-    Retail thì số luật, và cả số luật có lift > 1,5, của dữ liệu trộn lại
-    không sụp — có khi còn nhiều hơn dữ liệu thật — mà chỉ phần đỉnh của phân
-    bố lift mới tách ra rõ. Lý do: khi support nền của mỗi item đã rất bé thì
-    hai item ngẫu nhiên rơi vào cùng giỏ cũng đủ cho lift vượt 1,5, nên ở dữ
-    liệu thưa ngưỡng lift 1,5 không chứng minh được điều gì.
+    Cố ý KHÔNG viết sẵn một câu kết luận, vì thống kê nào tách được dữ liệu thật
+    khỏi dữ liệu trộn còn tùy CSDL. Trên Groceries cả ba thống kê của dữ liệu
+    thật đều cao hơn, nhưng không áp đảo: số luật gấp khoảng 1,4 lần, lift lớn
+    nhất 1,7 lần, số luật lift > 1,5 khoảng 2,6 lần. Trên CSDL rất thưa như
+    Retail thì dữ liệu trộn còn có NHIỀU luật hơn dữ liệu thật, số luật lift > 1,5
+    chỉ kém khoảng 1,3 lần, và chỉ phần đỉnh của phân bố lift mới tách ra rõ. Lý
+    do: khi support nền của mỗi item đã rất bé thì hai item ngẫu nhiên rơi vào
+    cùng giỏ cũng đủ cho lift vượt 1,5, nên ngưỡng lift 1,5 không chứng minh
+    được điều gì. Thống kê chắc chắn hơn là số luật thật có lift vượt mọi bản
+    trộn, do scripts/app1_verify.py in ra.
 
     Vì vậy hàm in cả ba tỉ số và chỉ ra thống kê nào tách tốt nhất, để người
     đọc rút kết luận đúng cho từng CSDL thay vì tin một câu viết cứng.
@@ -201,8 +207,8 @@ def compare_real_vs_shuffled(rows):
     best_ratio, best_label = max(ratios)
     print(f"  Thống kê tách dữ liệu thật khỏi dữ liệu trộn rõ nhất: "
           f"{best_label} (gấp {best_ratio:.2f} lần).")
-    print("  Phép trộn giữ nguyên độ bán chạy của từng item, nên phần chênh"
-          " lệch còn lại là do các item thật sự được mua cùng nhau.")
+    print("  Phép swap giữ nguyên support từng item và độ dài từng giỏ, nên chỉ thống kê"
+          " nào tách rõ mới là bằng chứng các item thật sự được mua cùng nhau.")
 
 
 def main():

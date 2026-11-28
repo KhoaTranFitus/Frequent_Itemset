@@ -1,6 +1,6 @@
 import argparse
 
-from src.config import to_min_count
+from src.config import to_min_count, use_utf8_stdout
 from src.utils import read_transactions, find_frequent_items,write_result
 from src.structures import build_tree, get_prefix_paths, build_conditional_tree
 
@@ -29,6 +29,7 @@ def fpgrowth(transactions, min_count):
     return result
 
 if __name__ == "__main__":
+    use_utf8_stdout()       # in tiếng Việt không lỗi khi output bị pipe trên Windows
     parser = argparse.ArgumentParser()
     parser.add_argument("input",help ="đường dẫn file input")
     parser.add_argument ("--minsup", type=float,required=True, help="minsup tương đối, vd 0.4")
