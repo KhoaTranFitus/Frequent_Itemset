@@ -162,6 +162,7 @@ Mọi tham số (CSDL, các mức minsup, seed) nằm trong [`src/config.py`](sr
 python -m scripts.exp_runtime        # thời gian, số tập phổ biến, đối chiếu SPMF (khoảng 7 phút)
 python -m scripts.exp_scalability    # thời gian theo kích thước CSDL
 python -m scripts.exp_memory         # bộ nhớ đỉnh
+python -m scripts.exp_slots          # bộ nhớ đỉnh khi có / không có __slots__
 python -m scripts.exp_txlen          # ảnh hưởng của độ dài giao dịch
 python -m scripts.exp_tree_stats     # cấu trúc FP-tree, chi phí dựng cây / khai thác
 python -m scripts.plot_ch2           # vẽ biểu đồ
