@@ -66,26 +66,26 @@ def describe(baskets):
 
 
 def shuffle_keep_marginals(baskets, seed):
-    """Trộn item giữa các giỏ nhưng giữ nguyên tần suất item và độ dài từng giỏ.
+    """Trộn item giữa các giỏ, giữ nguyên số LƯỢT của mỗi item và độ dài từng giỏ.
 
-    Dùng làm **null model** (mô hình đối chứng) cho phần diễn giải: nếu các luật
-    kết hợp tìm được chỉ là hệ quả của việc vài item bán rất chạy, thì dữ liệu đã
-    trộn phải cho ra những luật lift tương đương. Thực tế không như vậy, và đó
-    chính là bằng chứng các mẫu tìm được là thật.
+    Đây là cách trộn của bản null model ĐẦU TIÊN. Null model dùng trong báo cáo
+    (Bảng XII) và notebook là swap_randomize trong scripts/app1_verify.py, vì
+    cách trộn ở đây không giữ đúng support (xem hạn chế bên dưới). Hàm được giữ
+    lại để có thể so sánh lại hai cách trộn.
 
     Cách trộn: làm phẳng toàn bộ lượt item thành một danh sách, trộn một lần bằng
     random.Random(seed), rồi cắt lại theo đúng độ dài từng giỏ ban đầu. Nhờ vậy:
 
-    - tần suất mỗi item được giữ **chính xác** (vẫn là từng ấy lượt),
-    - độ dài mỗi giỏ được giữ **chính xác**,
-    - chỉ có sự đồng xuất hiện giữa các item bị phá.
+    - số lượt của mỗi item được giữ **chính xác**,
+    - độ dài mỗi giỏ (tính cả item trùng) được giữ **chính xác**,
+    - sự đồng xuất hiện giữa các item bị phá.
 
-    Hạn chế đã biết, phải nêu trong báo cáo: cách này có thể đặt hai lượt của
-    cùng một item vào một giỏ. fpgrowth đếm support bằng set(transaction) nên
-    support vẫn đúng, nhưng số item phân biệt trong giỏ đó giảm đi một chút, nên
-    dữ liệu trộn hơi "loãng" hơn dữ liệu thật. Lệch này chỉ làm null model dễ
-    thắng hơn, tức là kết luận "dữ liệu thật có nhiều luật mạnh hơn hẳn" vẫn
-    đứng, không bị thổi phồng.
+    Hạn chế: cách này có thể đặt hai lượt của cùng một item vào một giỏ.
+    fpgrowth đếm support bằng set(transaction) nên hai lượt đó gộp làm một, tức
+    SUPPORT của item bị giảm (trên Groceries, whole milk từ 2.513 xuống khoảng
+    2.100 giỏ). Dữ liệu trộn vì thế "loãng" hơn thật và cho ít luật hơn, nên
+    chênh lệch giữa dữ liệu thật và dữ liệu trộn bị PHÓNG ĐẠI: số luật lift > 1,5
+    gấp 21,6 lần, trong khi với swap_randomize chỉ gấp 2,6 lần.
 
     Không sửa danh sách gốc.
     """
