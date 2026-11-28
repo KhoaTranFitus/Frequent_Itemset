@@ -37,11 +37,13 @@ def save(fig, name):
     fig.savefig(path, dpi=200)
     plt.close(fig)
     print(f"Đã lưu {path}")
+
+
 def plot_memory():
     """Bộ nhớ đỉnh của bản cơ bản và bản tối ưu tại minsup giữa, mỗi CSDL một ô.
 
     Mỗi ô có trục tung riêng, BẮT ĐẦU TỪ 0, nên chiều cao hai cột tỉ lệ đúng với số MB
-    (trục log trước đây phóng đại chênh lệch, ví dụ Chess 4,27 -> 3,08 MB trông như giảm 4 lần).
+    (trục log dễ phóng đại chênh lệch nhỏ giữa hai cột thành khác biệt lớn).
     """
     df = pd.read_csv(f"{EXP_DIR}/memory.csv")
     fig, axes = plt.subplots(1, len(df), figsize=(10, 3.6))
